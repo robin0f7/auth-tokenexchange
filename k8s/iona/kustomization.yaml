@@ -1,0 +1,9 @@
+resources:
+  - ./../base/tokenendpoint
+  - ./../base/redisproxy # makes memorystore available via kubectl port-forward
+  - namespace.yaml
+images:
+  - name: tokenendpoint:0.1
+    newName: eu.gcr.io/iona-1/tokenendpoint
+    newTag: iona-latest
+namespace: tokenator

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tokenendpoint
+  labels:
+    app: tokenendpoint
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tokenendpoint
+  template:
+    metadata:
+      labels:
+        app: tokenendpoint
+    spec:
+      containers:
+        - name: tokenendpoint
+          image: tokenendpoint:0.1
+          ports:
+            - containerPort: 3000

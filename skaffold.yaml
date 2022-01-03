@@ -1,0 +1,24 @@
+# skaffold build -t latest -d ""
+apiVersion: skaffold/v2beta10
+kind: Config
+build:
+  tagPolicy:
+    gitCommit:
+      prefix: latest-
+  local:
+    push: false
+    concurrency: 8
+    useBuildkit: true
+  artifacts:
+    - image: tokenendpoint
+      context: tokenendpoint
+profiles:
+  - name: cloud
+    build:
+      local:
+        push: true
+        concurrency: 8
+        useBuildkit: true
+      artifacts:
+        - image: tokenendpoint
+          context: tokenendpoint

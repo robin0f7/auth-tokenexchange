@@ -1,0 +1,19 @@
+{
+  "name": "tokenendpoint",
+  "version": "1.0.0",
+  "description": "Derive tokens for internal services based on id tokens & custom claims from federated oauth2/openid connect providers",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Robin Bryce",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/secret-manager": "^3.10.1",
+    "express": "^4.17.2",
+    "got": "^12.0.0",
+    "node-jose": "^2.0.0",
+    "oidc-provider": "^7.10.4",
+    "redis": "^4.0.1"
+  }
+}

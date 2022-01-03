@@ -1,0 +1,4 @@
+commonLabels:
+  app.kubernetes.io/part-of: iona
+resources:
+  - deployment.yaml

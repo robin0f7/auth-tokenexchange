@@ -1,0 +1,5 @@
+commonLabels:
+  app.kubernetes.io/part-of: tokenator
+resources:
+  - service.yaml
+  - deployment.yaml

@@ -1,0 +1,28 @@
+---
+version: '3'
+silent: true
+
+env:
+  # The following to are specific to go-rrr ci/cd
+  SKAFFOLD_DEFAULT_REPO: "eu.gcr.io/iona-1"
+tasks:
+  build:
+    desc: 'build the images'
+    env:
+      # PROFILE: "cloud"
+      PROFILE: '{{default "cloud" .PROFILE}}'
+      TAG: '{{default "" .TAG}}'
+    cmds:
+      - |
+        CMD="skaffold build ${PROFILE:+-p $PROFILE} ${TAG:+-t $TAG}"
+        echo $CMD && $CMD
+  up:
+    desc: 'deploy the k8s manifests'
+    cmds:
+      - |
+        kustomize build k8s/iona | kubectl apply -f -
+  down:
+    desc: 'deploy the k8s manifests'
+    cmds:
+      - |
+        kustomize build k8s/iona | kubectl delete -f -
