@@ -5,6 +5,7 @@ silent: true
 env:
   # The following to are specific to go-rrr ci/cd
   SKAFFOLD_DEFAULT_REPO: "eu.gcr.io/iona-1"
+  KUBECTL: kubectl
 tasks:
   build:
     desc: 'build the images'
@@ -26,3 +27,64 @@ tasks:
     cmds:
       - |
         kustomize build k8s/iona | kubectl delete -f -
+
+
+  token-exchange:
+    desc: |
+      ID  CLIENT_ID  (of the service requesting the token exchange)     defaults: {{.ID}}
+      S   SECRET     (of the service requesting the token exchange)               {{.S}}
+      TOKEN   TOKEN                 {{.TOKEN}}
+      URL for token endpoint        {{.URL}}
+    env:
+      ID: '{{default "iona-1" .ID}}'
+      S: '{{default "iona-1-password" .S}}'
+      TOKEN: '{{default "XXXX" .TOKEN}}'
+      URL: '{{default "http://localhost:3000/token" .URL}}'
+    cmds:
+      - |
+        echo ": $ID $S $URL"
+        # -H 'authorization: Basic cnMwODpsb25nLXNlY3VyZS1yYW5kb20tc2VjcmV0' \
+        curl -X POST \
+          -H 'content-type: application/x-www-form-urlencoded' \
+          -H 'x-forwarded-proto: https' \
+          --url "${URL}" \
+          --data-urlencode "client_id=${ID}" \
+          --data-urlencode "client_secret=${S}" \
+          --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+          --data-urlencode "subject_token=${TOKEN}" \
+          --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
+          --data-urlencode "audience=iona" \
+          --data-urlencode "resuorce=https://nodes.iona.thaumagen.com/ethnode0"
+
+
+  client-credentials:
+    desc: |
+      ID  CLIENT_D        defaults: {{.ID}}
+      S   SECRET                    {{.S}}
+      URL for token endpoint        {{.URL}}
+    env:
+      ID: '{{default "client-1" .ID}}'
+      S: '{{default "password" .S}}'
+      URL: '{{default "http://localhost:3000/token" .URL}}'
+    cmds:
+      - |
+        echo ": $ID $S $URL"
+        curl -X POST \
+          -H 'content-type: application/x-www-form-urlencoded' \
+          -H 'x-forwarded-proto: https' \
+          --url "${URL}" \
+          --data-urlencode 'grant_type=client_credentials' \
+          --data-urlencode "client_id=${ID}" \
+          --data-urlencode "client_secret=${S}"
+
+  pf-redis:
+    desc: 'port forward to redis'
+    cmds:
+      - |
+        POD=$({{.KUBECTL}} -n tokenator get pod \
+           --selector=app=redisproxy \
+           --no-headers -o custom-columns=":metadata.name")
+        echo $POD
+        # {{.KUBECTL}} -n {{.N}} port-forward --address localhost pod/$POD 8080
+        {{.KUBECTL}} -n tokenator port-forward pod/$POD 6397
+

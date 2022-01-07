@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: redis-cli
+  name: redis-cli
+spec:
+  selector:
+    matchLabels:
+      app: redis-cli
+  template:
+    metadata:
+      labels:
+        app: redis-cli
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      containers:
+        - image: eu.gcr.io/iona-1/redis-cli:iona-latest
+          imagePullPolicy: Always
+          env:
+            - name: REDIS_HOST
+              value: "10.54.0.3" # Private address of Memorystore.
+            - name: REDIS_PORT
+              value: "6379"
+
+          name: redis-cli
+          resources:
+            requests:
+              cpu: 10m
+              memory: 10m
+

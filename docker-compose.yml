@@ -1,0 +1,38 @@
+version: '3.4'
+
+services:
+  redis:
+    image: redis:6.2-alpine
+    container_name: store
+    ports:
+      - 6379:6379
+    volumes:
+      - tokenator-redis-data:/data
+    command: [ "redis-server", "--bind", "0.0.0.0", "--protected-mode", "no", "--appendonly", "yes", "--loglevel", "notice" ]
+
+  tokenendpoint:
+    links:
+      - redis
+    image: tokenendpoint
+    # build:
+    #   context: tokenendpoint
+    #   dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: development
+      GCP_PROJECT: "iona-1"
+      SIGNING_SECRET_FILE: /etc/credentials/debug.jwk
+      CLIENTS_FILE: /etc/credentials/clients.json
+      REDIS_URL: "redis://store"
+    ports:
+      - 3000:3000
+      - 9229:9229
+    volumes:
+      - type: bind
+        source: $PWD/tokenendpoint
+        target: /tokenendpoint
+      - type: bind
+        source: $PWD/credentials
+        target: /etc/credentials
+    command: ["node", "--inspect=0.0.0.0:9229", "index.js"]
+volumes:
+  tokenator-redis-data:

@@ -12,6 +12,9 @@ build:
   artifacts:
     - image: tokenendpoint
       context: tokenendpoint
+    - image: redis-cli
+      context: redis-cli
+
 profiles:
   - name: cloud
     build:
@@ -22,3 +25,5 @@ profiles:
       artifacts:
         - image: tokenendpoint
           context: tokenendpoint
+        - image: redis-cli
+          context: redis-cli
