@@ -14,18 +14,18 @@ spec:
         app: redisproxy
     spec:
       containers:
-      - image: tecnativa/tcp-proxy:latest
-        imagePullPolicy: Always
-        env:
-          - name: LISTEN
-            value: ":6379" # The listen address that it will be exposed to.
-          - name: TALK
-            value: "10.54.0.3:6379" # Private address of Memorystore.
-        name: redisproxy
-        resources:
-          requests:
-            cpu: 10m
-            memory: 10m
+        - image: tecnativa/tcp-proxy:latest
+          imagePullPolicy: Always
+          env:
+            - name: LISTEN
+              value: ":6379" # The listen address that it will be exposed to.
+            - name: TALK
+              value: "10.54.0.3:6379" # Private address of Memorystore.
+          name: redisproxy
+          resources:
+            requests:
+              cpu: 10m
+              memory: 10m
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       securityContext: {}

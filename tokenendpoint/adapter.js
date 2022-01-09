@@ -1,7 +1,5 @@
-const Redis = require('ioredis'); // eslint-disable-line import/no-unresolved
-const isEmpty = require('lodash/isEmpty');
-
-const client = new Redis(process.env.REDIS_URL, { keyPrefix: 'tokenator:oidc:' });
+import Redis from 'ioredis'; // eslint-disable-line import/no-unresolved
+import isEmpty from 'lodash/isEmpty.js';
 
 const grantable = new Set([
   'AccessToken',
@@ -33,6 +31,14 @@ function uidKeyFor(uid) {
 class RedisAdapter {
   constructor(name) {
     this.name = name;
+  }
+
+  ensureClient() {
+    if (this.redis) {
+      return this.redis;
+    }
+    this.redis =  new Redis(process.env.REDIS_URL, { keyPrefix: 'tokenator:oidc:' });
+    return this.redis;
   }
 
   async upsert(id, payload, expiresIn) {
@@ -162,6 +168,8 @@ class RedisAdapter {
     const store = consumable.has(this.name)
       ? { payload: JSON.stringify(payload) } : JSON.stringify(payload);
 
+    const client = this.ensureClient();
+
     const multi = client.multi();
     multi[consumable.has(this.name) ? 'hmset' : 'set'](key, store);
 
@@ -206,6 +214,9 @@ class RedisAdapter {
    *
    */
   async find(id) {
+
+    const client = this.ensureClient();
+
     const data = consumable.has(this.name)
       ? await client.hgetall(this.key(id))
       : await client.get(this.key(id));
@@ -235,7 +246,7 @@ class RedisAdapter {
    *
    */
   async findByUid(uid) {
-    const id = await client.get(uidKeyFor(uid));
+    const id = await this.ensureClient().get(uidKeyFor(uid));
     return this.find(id);
   }
 
@@ -251,7 +262,7 @@ class RedisAdapter {
    *
    */
   async findByUserCode(userCode) {
-    const id = await client.get(userCodeKeyFor(userCode));
+    const id = await this.ensureClient().get(userCodeKeyFor(userCode));
     return this.find(id);
   }
 
@@ -267,10 +278,12 @@ class RedisAdapter {
    */
   async destroy(id) {
     const key = this.key(id);
-    await client.del(key);
+    await this.ensureClient().del(key);
   }
 
   async revokeByGrantId(grantId) { // eslint-disable-line class-methods-use-this
+    const client = this.ensureClient();
+
     const multi = client.multi();
     const tokens = await client.lrange(grantKeyFor(grantId), 0, -1);
     tokens.forEach((token) => multi.del(token));
@@ -290,7 +303,7 @@ class RedisAdapter {
    *
    */
   async consume(id) {
-    await client.hset(this.key(id), 'consumed', Math.floor(Date.now() / 1000));
+    await this.ensureClient().client.hset(this.key(id), 'consumed', Math.floor(Date.now() / 1000));
   }
 
   key(id) {
@@ -298,4 +311,4 @@ class RedisAdapter {
   }
 }
 
-module.exports = RedisAdapter;
+export default RedisAdapter;

@@ -1,18 +1,16 @@
-const assert = require('assert');
-const jose = require('node-jose');
-const fs = require('fs');
+import assert from 'assert';
+import * as jose from 'jose';
+import { readFileSync } from 'fs';
 
 // Setup JWKS
 assert(process.env.SIGNING_SECRET_FILE, 'process.env.SIGNING_SECRET_FILE missing');
 
-const key = JSON.parse(fs.readFileSync(process.env.SIGNING_SECRET_FILE));
-
-const promise = new Promise((resolve, reject) => {
-    jose.JWK.asKey(key).
-        then((result) => {
-            // {result} is a jose.JWK.Key
-            resolve(result.keystore.toJSON(true));
-        });
+const signingKeys = new Promise((resolve, reject) => {
+    // XXX: TODO gcpsecret store support
+    const jwks = {keys: [JSON.parse(readFileSync(process.env.SIGNING_SECRET_FILE))]};
+    resolve(jwks);
 });
 
-module.exports = promise;
+// const signingKey = jose.importJWK(JSON.parse(readFileSync(process.env.SIGNING_SECRET_FILE)));
+
+export default signingKeys;

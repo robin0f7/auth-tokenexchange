@@ -1,5 +1,5 @@
-const assert = require('assert');
-const fs = require('fs');
+import assert from 'assert';
+import fs from 'fs';
 
 var accounts = false;
 var common_password = false;
@@ -52,4 +52,4 @@ class FileAccount {
     }
 }
 
-module.exports = FileAccount;
+export default FileAccount;

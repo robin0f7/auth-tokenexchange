@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "josekeys -t RSA",
+            "request":"launch",
+            "type": "python",
+            "python": "${workspaceFolder}/env/bin/python3",
+            "program": "${workspaceFolder}/py/josekeys.py",
+            "args": ["jwk", "-t", "RSA", "-s", "4096"]
+        },
+        {
             "type": "node",
             "request": "attach",
             "name": "Docker: Attach to Node",

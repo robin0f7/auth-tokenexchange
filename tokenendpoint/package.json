@@ -1,5 +1,6 @@
 {
   "name": "tokenendpoint",
+  "type": "module",
   "version": "1.0.0",
   "description": "Derive tokens for internal services based on id tokens & custom claims from federated oauth2/openid connect providers",
   "main": "index.js",
@@ -13,7 +14,8 @@
     "express": "^4.17.2",
     "got": "^12.0.0",
     "ioredis": "^4.28.2",
-    "node-jose": "^2.0.0",
+    "jose": "^4.3.7",
+    "lodash": "^4.17.21",
     "oidc-provider": "^7.10.4",
     "redis": "^4.0.1"
   }

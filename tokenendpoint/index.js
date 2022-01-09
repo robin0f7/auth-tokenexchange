@@ -2,25 +2,30 @@
 // https://github.com/panva/node-oidc-provider
 // https://github.com/panva/node-oidc-provider-example/tree/main/03-oidc-views-accounts
 
-const assert = require('assert');
-const path = require('path');
-const express = require('express');
-const bodyParser = require('body-parser');
-const fs = require('fs');
+import assert from 'assert';
+import path from 'path';
+import express from 'express';
+import bodyParser from 'body-parser';
+import fs from 'fs';
 // const errors = require('oidc-provider/lib/helpers/errors');
-const Provider = require('oidc-provider');
-const adapter = require("./adapter");
-const InteractionRoutes = require("./interaction");
-const registerTokenExchangeGrant = require("./tokenexchange.js");
+import Provider from 'oidc-provider';
+//import * as jose from 'jose';
 
-// simple JWKS keystore
-const keystorePromise = require('./keystore');
+// local imports
+import * as errors from './errors.js'
+import adapter from "./adapter.js";
+import InteractionRoutes from "./interaction.js";
+// import {unverifiedDecodePayload, getWellKnownOpenIDConf} from "./tokenutils.js"
+import registerTokenExchangeGrant from './tokenexchange.js';
+// 
+// // simple JWKS keystore
+import signingKeys from './keystore.js';
 
 // custom routes for interation UI
 // check we have all the config we need from the environment
 // middleware to add "no caching" headers
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || 300
-const PATH_PREFIX = process.env.PATH_PREFIX || "/tokens"
+const PATH_PREFIX = process.env.PATH_PREFIX || ""
 const PORT = process.env.PORT || 3000;
 const PROVIDER = process.env.PROVIDER || "http://localhost";
 const clients = JSON.parse(fs.readFileSync(process.env.CLIENTS_FILE));
@@ -50,18 +55,31 @@ const parse = bodyParser.urlencoded({ extended: false });
 const expressApp = express();
 expressApp.set('trust proxy', true);
 expressApp.set('view engine', 'ejs');
-expressApp.set('views', path.resolve(__dirname, 'views'));
+expressApp.set('views', path.resolve(path.dirname(''), 'views'));
 
-// configure the OIDC provider with the populated keystore, add the custom
-// routes and start the express server 
-keystorePromise.then((jwks) => {
+const parameters = [
+  'audience', 'resource', 'scope', 'requested_token_type',
+  'subject_token', 'subject_token_type',
+  'actor_token', 'actor_token_type'
+];
+const allowedDuplicateParameters = ['audience', 'resource'];
+const tokenExchangeGrantType = 'urn:ietf:params:oauth:grant-type:token-exchange';
+
+// Configure the OIDC provider with the populated keystore, add the custom
+// routes and start the express server. We load the signing keys using a
+// promise so that they can come from arbitrary secure storage (eg GCP Secrets
+// permissioned using workload identity)
+signingKeys.then((jwks) => {
     let claims
 
-    console.log("-------- ######################## --------------------");
+    console.log("-------- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% --------------------");
 
     const oidc = new Provider(`${PROVIDER}`, {
         adapter: adapter,
         clients: clients,
+        clientDefaults: {
+            id_token_signed_response_alg: "ES256",
+        },
         pkce: {
             required: () => false,
         },
@@ -96,9 +114,8 @@ keystorePromise.then((jwks) => {
         extraTokenClaims: async (ctx, token) => {
             console.log("extraTokenClaims: ", token);
 
-            // We only add to the token claims for client credentials flow
-            if (token.kind !== 'ClientCredentials') {
-                console.log("extraTokenClaims: not client credentials token, so not adding claims");
+            if (! ["ClientCredentials", "AccessToken", "IdToken"].includes(token.kind)) {
+                console.log(`extraTokenClaims: unsupported token kind ${token.kind}`);
                 return undefined;
             }
 
@@ -114,18 +131,18 @@ keystorePromise.then((jwks) => {
                 "jti": true
             }
 
-            const app = await adapter.getApplication(token.clientId);
+            // const app = await adapter.getApplication(token.clientId);
             var extra = {};
-            for (const [key, value] of Object.entries(app.custom_claims)) {
+            // for (const [key, value] of Object.entries(app.custom_claims)) {
 
-                // Check the explicitly rejected claims
-                if (key.toLowerCase() in reject_claims) {
-                    console.log(`extraTokenClaims: rejecting custom_claim ${key}, claim name is reserved`);
-                    continue;
-                }
+            //     // Check the explicitly rejected claims
+            //     if (key.toLowerCase() in reject_claims) {
+            //         console.log(`extraTokenClaims: rejecting custom_claim ${key}, claim name is reserved`);
+            //         continue;
+            //     }
 
-                extra[key] = value;
-            }
+            //     extra[key] = value;
+            // }
 
             return extra;
 
@@ -211,6 +228,12 @@ keystorePromise.then((jwks) => {
         '/interaction/:uid/abort',
         setNoCache,
         interaction.abort.bind(interaction)
+    );
+    expressApp.post(
+        '/interaction/:uid/exchange',
+        setNoCache,
+        parse,
+        interaction.confirm.bind(interaction)
     );
 
     // leave the rest of the requests to be handled by oidc-provider,

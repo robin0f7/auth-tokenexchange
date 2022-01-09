@@ -26,3 +26,5 @@ class GCPSecretReader {
         return version.payload.data;
     }
 }
+
+export default GCPSecretReader;

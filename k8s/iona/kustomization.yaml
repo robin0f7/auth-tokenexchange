@@ -1,6 +1,7 @@
 resources:
   - ./../base/tokenendpoint
   - ./../base/redisproxy # makes memorystore available via kubectl port-forward
+  - ./../redis-cli
   - namespace.yaml
 images:
   - name: tokenendpoint:0.1

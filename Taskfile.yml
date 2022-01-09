@@ -6,7 +6,27 @@ env:
   # The following to are specific to go-rrr ci/cd
   SKAFFOLD_DEFAULT_REPO: "eu.gcr.io/iona-1"
   KUBECTL: kubectl
+  PYENV: env
+
+  # this is likely expired 
+  DEFAULT_ID_TOKEN: eyJhbGciOiJSUzI1NiIsImtpZCI6IjM1MDZmMzc1MjI0N2ZjZjk0Y2JlNWQyZDZiNTlmYThhMmJhYjFlYzIiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiUm9iaW4gQnJ5Y2UiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUFUWEFKd2xuTjdqc25lMkYtdFp6VUdtRWNDWlN4QzN1MGtOdUtSWUVYZkM9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vaW9uYS0xIiwiYXVkIjoiaW9uYS0xIiwiYXV0aF90aW1lIjoxNjQxMzA1ODcxLCJ1c2VyX2lkIjoiWnl0aVp2TkdCelBlVjN3a0ZGdU51NjhDZ2E3MiIsInN1YiI6Ilp5dGladk5HQnpQZVYzd2tGRnVOdTY4Q2dhNzIiLCJpYXQiOjE2NDE2NjcyNjksImV4cCI6MTY0MTY3MDg2OSwiZW1haWwiOiJyb2JpbmJyeWNlQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTExMjgwOTA4OTkyMzQxNDA2Nzg0Il0sImVtYWlsIjpbInJvYmluYnJ5Y2VAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoiZ29vZ2xlLmNvbSIsInRlbmFudCI6InB1YmxpYy02OWN2ZiJ9fQ.QE3S7cxh3FwUo8NiHl7s3kal5TjWWMCLWlzDzQ0CTyZiOjYt9VDM-AARPU05IV95Fv_lerWAPmQyd3zuP58vnLtFot6SJMbd91WFRWphQW54Ah8Qj1N43w-gYE22t0IY7iDKl-kVir3sW7PHMXvP_fegyYxljyo7ETHd3PHyvZjH_qxwojay5KUOxcKHUdQHHWdvltlPUzdDaKiPDoj5Awiz_hRn7P4uy9lhLLT7aX5EIgFI0oc02qh_jJDwojOfVXzUZBZQVUQ3Z_0z9l3MsacpfWV_sc_XBFZ_pBPviHyYdJUcRcW_IEhQSfLeGeaUYZZiEsD6FbqrvGJnEbVuyg
+  
+  # sh: echo {{._DEFAULT_ID_TOKEN}} | tr -d ' '
 tasks:
+
+  bootstrap-debian:
+    desc: |
+      install tooling on debain like systems. for other platforms run `task
+      bootstrap-debian --sumarize` and use the results to find the right bits.
+    env:
+      PYENV: '{{default "env" .PYENV}}'
+    cmds:
+      - |
+        python3 -m venv ${PYENV}
+        source ${PYENV}/bin/activate
+        pip3 install -r py/requirements.txt
+        # pip3 install -U --upgrade-strategy=eager -r py/requirements.txt
+
   build:
     desc: 'build the images'
     env:
@@ -28,21 +48,32 @@ tasks:
       - |
         kustomize build k8s/iona | kubectl delete -f -
 
+  discodoc:
+    desc: fetch .well-known/openid-configuration
+    env:
+      URL: '{{default "http://localhost:3000/token" .URL}}'
+
+    cmds:
+      - |
+        curl -s http://localhost:3000/.well-known/openid-configuration | jq -r
+        # curl -s ${URL}/.well-known/openid-configuration
 
   token-exchange:
     desc: |
       ID  CLIENT_ID  (of the service requesting the token exchange)     defaults: {{.ID}}
       S   SECRET     (of the service requesting the token exchange)               {{.S}}
-      TOKEN   TOKEN                 {{.TOKEN}}
-      URL for token endpoint        {{.URL}}
+      TOKEN                    {{.DEFAULT_ID_TOKEN}}
+      URL for token endpoint   {{.URL}}
     env:
       ID: '{{default "iona-1" .ID}}'
       S: '{{default "iona-1-password" .S}}'
-      TOKEN: '{{default "XXXX" .TOKEN}}'
+      TOKEN: '{{default "eyJhbGciOiJSUzI1NiIsImtpZCI6IjM1MDZmMzc1MjI0N2ZjZjk0Y2JlNWQyZDZiNTlmYThhMmJhYjFlYzIiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiUm9iaW4gQnJ5Y2UiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUFUWEFKd2xuTjdqc25lMkYtdFp6VUdtRWNDWlN4QzN1MGtOdUtSWUVYZkM9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vaW9uYS0xIiwiYXVkIjoiaW9uYS0xIiwiYXV0aF90aW1lIjoxNjQxNzI4NTIzLCJ1c2VyX2lkIjoiQTJURVJSVUFsRmI1ZkVzM2RmQ3JzeGNmZFE4MyIsInN1YiI6IkEyVEVSUlVBbEZiNWZFczNkZkNyc3hjZmRRODMiLCJpYXQiOjE2NDE3Mjg1MjMsImV4cCI6MTY0MTczMjEyMywiZW1haWwiOiJyb2JpbmJyeWNlQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTExMjgwOTA4OTkyMzQxNDA2Nzg0Il0sImVtYWlsIjpbInJvYmluYnJ5Y2VAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoiZ29vZ2xlLmNvbSIsInRlbmFudCI6InRoYXVtYWdlbi1oOTJjYiJ9fQ.KnihQV3kag2vWH7InZkHc1L6qz9lYkYRG8fS-KN_Jo7Bys_V4v8nQRzKHE9CHVUnAM8aSLeYLGLq_Mgt86sG_9L1itgpYLo1v6mD-2-A2JS_H3H3k_k1zAW8S_QedfcbPhaMZUwgBtggcDcUmhjfvBOcRIr51TFBekEeuJ_jeLZwu-Du4OQwNpRKP5F_QdiocUTYDQYSys22w4kX3WTj0vJXHAVDcGrMu3XPlYGKKGSYUFNrmcwNH53Ef6gNwlu5wGz3fuE-JacnbTrPiCvWRnfhNgZgK9IIZHUzN9EL-LcHsuEmAFap9qg2fDQwq6syYIvuemNwgQbn8dF8niVsGA"}}'
       URL: '{{default "http://localhost:3000/token" .URL}}'
     cmds:
       - |
+
         echo ": $ID $S $URL"
+        echo ": ${TOKEN}"
         # -H 'authorization: Basic cnMwODpsb25nLXNlY3VyZS1yYW5kb20tc2VjcmV0' \
         curl -X POST \
           -H 'content-type: application/x-www-form-urlencoded' \
@@ -52,7 +83,7 @@ tasks:
           --data-urlencode "client_secret=${S}" \
           --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
           --data-urlencode "subject_token=${TOKEN}" \
-          --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
+          --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
           --data-urlencode "audience=iona" \
           --data-urlencode "resuorce=https://nodes.iona.thaumagen.com/ethnode0"
 

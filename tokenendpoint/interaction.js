@@ -1,7 +1,7 @@
-const assert = require('assert');
+import { strictEqual } from 'assert';
 
 // simple account model (user list)
-const Account = require('./account');
+import account from './account.js';
 
 class InteractionRoutes {
     // derived from
@@ -45,9 +45,9 @@ class InteractionRoutes {
     async login(req, res, next) {
         try {
             const { uid, prompt, params } = await this.oidc.interactionDetails(req, res);
-            assert.strictEqual(prompt.name, 'login');
+            strictEqual(prompt.name, 'login');
             const client = await this.oidc.Client.find(params.client_id);
-            const accountId = await Account.authenticate(req.body.email, req.body.password);
+            const accountId = await account.authenticate(req.body.email, req.body.password);
             if (!accountId) {
                 res.render('login', {
                     client,
@@ -75,7 +75,7 @@ class InteractionRoutes {
         try {
             const interactionDetails = await this.oidc.interactionDetails(req, res);
             const { prompt: { name, details }, params, session: { accountId } } = interactionDetails;
-            assert.strictEqual(name, 'consent');
+            strictEqual(name, 'consent');
             let { grantId } = interactionDetails;
             let grant;
             console.log(details);
@@ -131,4 +131,4 @@ class InteractionRoutes {
     }
 };
 
-module.exports = InteractionRoutes
+export default InteractionRoutes
