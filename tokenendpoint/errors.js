@@ -1,16 +1,26 @@
 
-import oidcerrors from 'oidc-provider/lib/helpers/errors.js'
+import * as oidcerrors from 'oidc-provider/lib/helpers/errors.js'
 
-class _SubjectTokenVerifyFailed extends oidcerrors.OIDCProviderError {
-    constructor(err) {
+class SubjectTokenVerifyFailed extends oidcerrors.OIDCProviderError {
+    constructor(message, err) {
       super(401, 'invalid_subject_token');
       Error.captureStackTrace(this, this.constructor);
-      const m = err.message.replace(/"/g, '');
+      const m = (message || err.message || "unknown error").replace(/"/g, '');
       Object.assign(this, { error_description: m });
     }
 }
 
-class _TokenatorError extends Error {
+class RequestedScopesDenied extends oidcerrors.OIDCProviderError {
+    constructor(message, err) {
+      super(403, 'requested_scopes_denied');
+      Error.captureStackTrace(this, this.constructor);
+      const m = (message || err.message).replace(/"/g, '');
+      Object.assign(this, { error_description: m });
+    }
+}
+
+
+class TokenatorError extends Error {
     allow_redirect = true;
     constructor(status, message) {
         super(message);
@@ -22,16 +32,6 @@ class _TokenatorError extends Error {
         this.expose = status < 500;
     }
 }
-// 
-// class _ClaimsError extends TokenatorError {
-//     error_description = "missing or invalid claims";
-// 
-//     constructor(detail) {
-//         super(403, "invalid_claims");
-//         Error.captureStackTrace(this, this.constructor);
-//         Object.assign(this, {error_detail: detail});
-//     }
-// }
-export const TokenatorError = _TokenatorError;
-export const SubjectTokenVerifyFailed = _SubjectTokenVerifyFailed;
-// export const ClaimsError = TokenatorError;
+
+export {SubjectTokenVerifyFailed, RequestedScopesDenied, TokenatorError};
+export const {InvalidToken} = oidcerrors;

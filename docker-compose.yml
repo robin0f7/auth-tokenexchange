@@ -1,18 +1,18 @@
 version: '3.4'
 
 services:
-  redis:
-    image: redis:6.2-alpine
-    container_name: store
-    ports:
-      - 6379:6379
-    volumes:
-      - tokenator-redis-data:/data
-    command: [ "redis-server", "--bind", "0.0.0.0", "--protected-mode", "no", "--appendonly", "yes", "--loglevel", "notice" ]
+  #redis:
+  #  image: redis:6.2-alpine
+  #  container_name: store
+  #  ports:
+  #    - 6379:6379
+  #  volumes:
+  #    - tokenator-redis-data:/data
+  #  command: [ "redis-server", "--bind", "0.0.0.0", "--protected-mode", "no", "--appendonly", "yes", "--loglevel", "notice" ]
 
   tokenendpoint:
-    links:
-      - redis
+    # links:
+    #   - redis
     image: tokenendpoint
     # build:
     #   context: tokenendpoint
@@ -23,6 +23,7 @@ services:
       SIGNING_SECRET_FILE: /etc/credentials/debug.jwk
       CLIENTS_FILE: /etc/credentials/clients.json
       REDIS_URL: "redis://store"
+      PROVIDER: "http://tokenator_tokenendpoint_1:3000"
     ports:
       - 3000:3000
       - 9229:9229
@@ -36,3 +37,9 @@ services:
     command: ["node", "--inspect=0.0.0.0:9229", "index.js"]
 volumes:
   tokenator-redis-data:
+
+networks:
+  default:
+    external: true
+    name: rrr5_rrr
+

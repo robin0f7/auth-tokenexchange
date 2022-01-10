@@ -1,10 +1,26 @@
-import { Buffer } from 'buffer';
+// The  point of the token exchange grant is to integrate and trust identity
+// and authorization from an external platform. We are trusting the external
+// identity provider (of the original subject token) to assert the identity.
+// We then exchange that external token for a new 'impersonating' token. We
+// put the claims and scopes on the new token that are appropriate  to the
+// local application. No consent is required here as the resources for those
+// scopes and claims do not leave the local application. We don't need to add
+// everything here: There is still the 'extraTokenClaims' implementaion on our
+// provider. That can be used to add claims issued by local client credentials
+// and also exchanged tokens but in a uniform way.
+//
+// For this exchange, the 'application' is the collection of clients configured
+// for the provider. scope in any client enabling this grant defines the
+// superset of scopes that can be added.
+
 import * as jose from 'jose';
 // import oidcerrors from 'oidc-provider/lib/helpers/errors.js'
 import instance from 'oidc-provider/lib/helpers/weak_cache.js';
 import * as calculate_thumbprint from 'oidc-provider/lib/helpers/calculate_thumbprint.js';
 const thumbprint = calculate_thumbprint["x5t#S256"];
 import dpopValidate from 'oidc-provider/lib/helpers/validate_dpop.js';
+// import resolveResource from 'oidc-provider/lib/helpers/resolve_resource.js';
+import formatters from 'oidc-provider/lib/helpers/formatters.js';
 import resolveResource from 'oidc-provider/lib/helpers/resolve_resource.js';
 
 // local imports
@@ -19,6 +35,9 @@ const parameters = [
 const allowedDuplicateParameters = ['audience', 'resource'];
 const grantType = 'urn:ietf:params:oauth:grant-type:token-exchange';
 
+function difference(array, values) {
+  return array.filter((value) => values.indexOf(value) === -1)
+}
 
 async function tokenExchangeHandler(ctx, next) {
   // ctx.oidc.params holds the parsed parameters
@@ -63,13 +82,9 @@ async function tokenExchangeHandler(ctx, next) {
   // var header = jose.decodeProtectedHeader(subTokB64.split(".")[0]);
   // console.log(JSON.stringify(header))
 
-  console.log("---- unverified ----");
   var payload = unverifiedDecodePayload(subTokB64);
-  console.log(JSON.stringify(payload));
-  console.log(payload.iss);
 
   const openIDWellKnown = await getWellKnownOpenIDConf(payload.iss);
-  console.log(JSON.stringify(openIDWellKnown));
 
   // TODO: cache the remote keyset
   const JWKS = jose.createRemoteJWKSet(new URL(openIDWellKnown.jwks_uri));
@@ -77,12 +92,8 @@ async function tokenExchangeHandler(ctx, next) {
   try {
     const res = await jose.jwtVerify(subTokB64, JWKS);
     subjectToken = res.payload;
-
-    console.log("---- VERIFIED ----");
-    console.log(JSON.stringify(subjectToken));
   }
   catch(err) {
-    console.log("---- VERIFY FAILED ----");
     throw new errors.SubjectTokenVerifyFailed(err);
   }
 
@@ -90,7 +101,7 @@ async function tokenExchangeHandler(ctx, next) {
   if (client.tlsClientCertificateBoundAccessTokens || subjectToken['x5t#S256']) {
     cert = getCertificate(ctx);
     if (!cert) {
-      throw new InvalidGrant('mutual TLS client certificate not provided');
+      throw new errors.InvalidGrant('mutual TLS client certificate not provided');
     }
   }
 
@@ -99,10 +110,12 @@ async function tokenExchangeHandler(ctx, next) {
   }
 
   if (ctx.oidc.params.scope) {
-    const missing = difference([...ctx.oidc.requestParamScopes], [...subjectToken.scopes]);
+    const clientScopes = [...client.scope.split(' ')];
+    const missing = difference([...ctx.oidc.requestParamScopes], [...clientScopes]);
 
     if (missing.length !== 0) {
-      throw new InvalidScope(`token missing requested ${formatters.pluralize('scope', missing.length)}`, missing.join(' '));
+      throw new errors.RequestedScopesDenied(
+        `scopes not allowed ${formatters.pluralize('scope', missing.length)}: ${missing.join(' ')}`);
     }
   }
 
@@ -116,22 +129,28 @@ async function tokenExchangeHandler(ctx, next) {
     ctx.assert(unique, new InvalidGrant('DPoP Token Replay detected'));
   }
 
+  // XXX: TODO resource indicators possibly a better way to do this
+
   const at = new AccessToken({
     // [rfc8693 2.1] issued token sub 'typically' == subjectToken.sub
     sub: subjectToken.sub,
-    aud: subjectToken.aud,
+    aud: ctx.oidc.params.audience,
     client
   });
 
-  const scope = ctx.oidc.params.scope ? ctx.oidc.requestParamScopes : subjectToken.scopes;
-  const resource = await resolveResource(
-    ctx, subjectToken, { resourceIndicators }, scope,
-  );
+  // Above, we reject if any of the requested are missing.
+  if (ctx.oidc.params.scope) {
+    at.scope = ctx.oidc.params.scope;
+  }
+
+
+  // const resource = await resolveResource(
+  //   ctx, subjectToken, { resourceIndicators }, scope,
+  // );
 
   // the token type is taken from the resource server
   at.resourceServer = new ctx.oidc.provider.ResourceServer(subjectToken.iss, {
-    audience: ctx.oidc.params.aud,
-    scope: scope,
+    audience: ctx.oidc.params.audience,
     accessTokenFormat: "jwt"
   });
 
@@ -153,6 +172,8 @@ async function tokenExchangeHandler(ctx, next) {
   ctx.oidc.entity('AccessToken', at);
   const accessToken = await at.save(); // -> saves to our adapter
   // const accessToken = at;
+
+  const scope = ctx.oidc.requestParamScopes;
 
   let idToken;
   if (scope && scope.has('openid')) {

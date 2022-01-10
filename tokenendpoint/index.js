@@ -2,23 +2,14 @@
 // https://github.com/panva/node-oidc-provider
 // https://github.com/panva/node-oidc-provider-example/tree/main/03-oidc-views-accounts
 
-import assert from 'assert';
 import path from 'path';
 import express from 'express';
 import bodyParser from 'body-parser';
 import fs from 'fs';
-// const errors = require('oidc-provider/lib/helpers/errors');
 import Provider from 'oidc-provider';
-//import * as jose from 'jose';
 
 // local imports
-import * as errors from './errors.js'
-import adapter from "./adapter.js";
-import InteractionRoutes from "./interaction.js";
-// import {unverifiedDecodePayload, getWellKnownOpenIDConf} from "./tokenutils.js"
 import registerTokenExchangeGrant from './tokenexchange.js';
-// 
-// // simple JWKS keystore
 import signingKeys from './keystore.js';
 
 // custom routes for interation UI
@@ -27,14 +18,9 @@ import signingKeys from './keystore.js';
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || 300
 const PATH_PREFIX = process.env.PATH_PREFIX || ""
 const PORT = process.env.PORT || 3000;
-const PROVIDER = process.env.PROVIDER || "http://localhost";
-const clients = JSON.parse(fs.readFileSync(process.env.CLIENTS_FILE));
-
-function setNoCache(req, res, next) {
-    res.set('Pragma', 'no-cache');
-    res.set('Cache-Control', 'no-cache, no-store');
-    next();
-}
+const PROVIDER = process.env.PROVIDER || "https://iona.thaumagen.com";
+const CLIENTS = JSON.parse(fs.readFileSync(process.env.CLIENTS_FILE));
+const CLIENT_SCOPES_ALLOWED = ["email", "openid", "rpc://admin_nodeInfo", "rpc://eth_blockNumber", "rpc://eth_*", "rpc://rpc_modules"];
 
 // middleware to prefix the requrst url for any deployment specific path 
 // components so that the redirect responses go to the correct places
@@ -44,9 +30,6 @@ function setReqUrlPath(req, res, next) {
     next();
 }
 
-function findAccount(ctx, sub, token) {
-    console.log(`findAccount: looking for account sub==${sub}`)
-}
 
 // middleware to parse URL encoded request body
 const parse = bodyParser.urlencoded({ extended: false });
@@ -57,28 +40,22 @@ expressApp.set('trust proxy', true);
 expressApp.set('view engine', 'ejs');
 expressApp.set('views', path.resolve(path.dirname(''), 'views'));
 
-const parameters = [
-  'audience', 'resource', 'scope', 'requested_token_type',
-  'subject_token', 'subject_token_type',
-  'actor_token', 'actor_token_type'
-];
-const allowedDuplicateParameters = ['audience', 'resource'];
-const tokenExchangeGrantType = 'urn:ietf:params:oauth:grant-type:token-exchange';
-
 // Configure the OIDC provider with the populated keystore, add the custom
 // routes and start the express server. We load the signing keys using a
 // promise so that they can come from arbitrary secure storage (eg GCP Secrets
 // permissioned using workload identity)
 signingKeys.then((jwks) => {
-    let claims
 
     console.log("-------- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% --------------------");
 
     const oidc = new Provider(`${PROVIDER}`, {
-        adapter: adapter,
-        clients: clients,
+        // only need an adapter if we handout opaque access tokens. jwt access tokens are bearer tokens
+        clients: CLIENTS,
+        // clients cant enable scopes beyond those configured here
+        scopes: CLIENT_SCOPES_ALLOWED,
         clientDefaults: {
             id_token_signed_response_alg: "ES256",
+            grant_types: ["client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"]
         },
         pkce: {
             required: () => false,
@@ -88,7 +65,9 @@ signingKeys.then((jwks) => {
         // https://github.com/panva/node-oidc-provider/blob/main/docs/README.md#id-token-does-not-include-claims-other-than-sub
         conformIdTokenClaims: false,
         // define the claims for each scope
-        claims,
+        claims: {
+            aud: `${PROVIDER}`
+        },
         // include the keystore
         jwks,
         ttl: {
@@ -105,7 +84,6 @@ signingKeys.then((jwks) => {
             }
         },
 
-        findAccount: findAccount,
         interactions: {
             url(ctx, interaction) {
                 return `${PATH_PREFIX}/interaction/${interaction.uid}`;
@@ -148,11 +126,11 @@ signingKeys.then((jwks) => {
 
         },
         features: {
+            clientCredentials: { enabled: true },
+            introspection: { enabled: true },
             // disable the packaged interactions
             devInteractions: { enabled: false },
-            rpInitiatedLogout: { enabled: true },
-            clientCredentials: { enabled: true },
-            introspection: { enabled: false },
+            rpInitiatedLogout: { enabled: false },
             resourceIndicators: {
                 // From the node-oidc docs:
                 // "Client Credentials grant must only contain a single resource parameter." 
@@ -201,41 +179,6 @@ signingKeys.then((jwks) => {
     registerTokenExchangeGrant(oidc);
 
     oidc.proxy = true;
-
-    // add user interaction routes
-    const interaction = new InteractionRoutes(oidc, PATH_PREFIX);
-
-    // TODO: could probably do something better than using a class and binding the object
-    // to the member pointer
-    expressApp.get(
-        '/interaction/:uid',
-        setNoCache,
-        interaction.interact.bind(interaction)
-    );
-    expressApp.post(
-        '/interaction/:uid/login',
-        setNoCache,
-        parse,
-        interaction.login.bind(interaction)
-    );
-    expressApp.post(
-        '/interaction/:uid/confirm',
-        setNoCache,
-        parse,
-        interaction.confirm.bind(interaction)
-    );
-    expressApp.get(
-        '/interaction/:uid/abort',
-        setNoCache,
-        interaction.abort.bind(interaction)
-    );
-    expressApp.post(
-        '/interaction/:uid/exchange',
-        setNoCache,
-        parse,
-        interaction.confirm.bind(interaction)
-    );
-
     // leave the rest of the requests to be handled by oidc-provider,
     // there's a catch-all 404 there
     expressApp.use(setReqUrlPath, oidc.callback(), (req, res) => { console.log(res);});
