@@ -1,0 +1,7 @@
+images:
+  # This interferes with skaffolde debug (or at least vscode's use of it)
+  - name: tokenendpoint
+    newName: eu.gcr.io/iona-1/tokenendpoint
+    newTag: iona-latest
+resources:
+  - ./../iona

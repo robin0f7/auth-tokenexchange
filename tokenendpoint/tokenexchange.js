@@ -50,7 +50,7 @@ async function tokenExchangeHandler(ctx, next) {
 
   // your grant implementation
   // see /lib/actions/grants for references on how to instantiate and issue tokens
-  console.log('hello tokenexchange');
+  console.log('x hello tokenexchange');
   console.log(JSON.stringify(ctx.oidc.params))
   const {
     conformIdTokenClaims,
@@ -87,15 +87,23 @@ async function tokenExchangeHandler(ctx, next) {
   const openIDWellKnown = await getWellKnownOpenIDConf(payload.iss);
 
   // TODO: cache the remote keyset
-  const JWKS = jose.createRemoteJWKSet(new URL(openIDWellKnown.jwks_uri));
+  console.log(`fetched jwks_uri: ${openIDWellKnown.jwks_uri}`);
+  const JWKS = await jose.createRemoteJWKSet(new URL(openIDWellKnown.jwks_uri));
+  console.log("fetched jwks_uri");
+  console.log(JWKS);
+  console.log(JSON.stringify(JWKS));
   let subjectToken;
   try {
     const res = await jose.jwtVerify(subTokB64, JWKS);
+    console.log(res);
     subjectToken = res.payload;
   }
   catch(err) {
+    console.log("subject token verify failed");
+    console.log(err);
     throw new errors.SubjectTokenVerifyFailed(err);
   }
+  console.log("subject token verified");
 
   let cert;
   if (client.tlsClientCertificateBoundAccessTokens || subjectToken['x5t#S256']) {
@@ -118,6 +126,7 @@ async function tokenExchangeHandler(ctx, next) {
         `scopes not allowed ${formatters.pluralize('scope', missing.length)}: ${missing.join(' ')}`);
     }
   }
+  console.log("requested scopes acceptable");
 
   const dPoP = await dpopValidate(ctx);
 
@@ -141,6 +150,8 @@ async function tokenExchangeHandler(ctx, next) {
   // Above, we reject if any of the requested are missing.
   if (ctx.oidc.params.scope) {
     at.scope = ctx.oidc.params.scope;
+  } else {
+    at.scope = client.scope;
   }
 
 
@@ -203,6 +214,7 @@ async function tokenExchangeHandler(ctx, next) {
     scope: at.scope,
     token_type: at.tokenType,
   };
+  console.log("completed secure token grant");
 
   await next();
 }

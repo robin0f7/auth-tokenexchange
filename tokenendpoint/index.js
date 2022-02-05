@@ -20,7 +20,7 @@ const PATH_PREFIX = process.env.PATH_PREFIX || ""
 const PORT = process.env.PORT || 3000;
 const PROVIDER = process.env.PROVIDER || "https://iona.thaumagen.com";
 const CLIENTS = JSON.parse(fs.readFileSync(process.env.CLIENTS_FILE));
-const CLIENT_SCOPES_ALLOWED = ["email", "openid", "rpc://admin_nodeInfo", "rpc://eth_blockNumber", "rpc://eth_*", "rpc://rpc_modules"];
+const CLIENT_SCOPES = ["email", "openid", "rpc://admin_nodeInfo", "rpc://eth_blockNumber", "rpc://eth_*", "rpc://rpc_modules"];
 
 // middleware to prefix the requrst url for any deployment specific path 
 // components so that the redirect responses go to the correct places
@@ -52,7 +52,7 @@ signingKeys.then((jwks) => {
         // only need an adapter if we handout opaque access tokens. jwt access tokens are bearer tokens
         clients: CLIENTS,
         // clients cant enable scopes beyond those configured here
-        scopes: CLIENT_SCOPES_ALLOWED,
+        scopes: CLIENT_SCOPES,
         clientDefaults: {
             id_token_signed_response_alg: "ES256",
             grant_types: ["client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"]

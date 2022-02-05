@@ -14,8 +14,45 @@ spec:
       labels:
         app: tokenendpoint
     spec:
+      volumes:
+        - name: config
+          # target for https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/all-in-one-volume.md
+          # sources:
       containers:
         - name: tokenendpoint
-          image: tokenendpoint:0.1
+          image: tokenendpoint
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
+
+          env:
+            - name: PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: tokenator
+                  key: PROVIDER
+            - name: PATH_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tokenator
+                  key: PATH_PREFIX
+            - name: SIGNING_SECRET_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: tokenator
+                  key: SIGNING_SECRET_FILE
+            - name: CLIENTS_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: tokenator
+                  key: CLIENTS_FILE
+
+            - name: CLIENT_SCOPES
+              valueFrom:
+                configMapKeyRef:
+                  name: tokenator
+                  key: CLIENT_SCOPES
+
+          volumeMounts:
+            - name: config
+              mountPath: /config

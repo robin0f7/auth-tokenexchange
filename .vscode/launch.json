@@ -5,12 +5,39 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Kubernetes: Run/Debug",
+            "type": "cloudcode.kubernetes",
+            "request": "launch",
+            "skaffoldConfig": "${workspaceFolder}/skaffold.yaml",
+            // "profile": "cloudbuild",
+            "watch": true,
+            "cleanUp": true,
+            "portForward": true,
+            "imageRegistry": "gcr.io/iona-1",
+            "debug": [
+                {
+                    "image": "tokenendpoint",
+                    "containerName": "tokenendpoint",
+                    "sourceFileMap": {
+                        "${workspaceFolder}/tokenendpoint": "/tokenendpoint"
+                    }
+                }
+            ]
+        },
+
+        {
             "name": "josekeys -t RSA",
-            "request":"launch",
+            "request": "launch",
             "type": "python",
             "python": "${workspaceFolder}/env/bin/python3",
             "program": "${workspaceFolder}/py/josekeys.py",
-            "args": ["jwk", "-t", "RSA", "-s", "4096"]
+            "args": [
+                "jwk",
+                "-t",
+                "RSA",
+                "-s",
+                "4096"
+            ]
         },
         {
             "type": "node",
@@ -25,7 +52,7 @@
             "name": "Launch Program",
             "env": {
                 "GCP_PROJECT": "iona-1",
-                "SIGNING_SECRET_FILE": "${workspaceFolder}/credentials/debug.jwk",
+                "SIGNING_SECRET_FILE": "${workspaceFolder}/credentials/provider-signing-key.jwk",
                 "CLIENTS_FILE": "${workspaceFolder}/credentials/clients.json",
                 "REDIS_URL": "redis://store"
             },

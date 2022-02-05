@@ -1,10 +1,20 @@
+namespace: iona
 resources:
   - ./../base/tokenendpoint
-  - ./../base/redisproxy # makes memorystore available via kubectl port-forward
-  - ./../redis-cli
-  - namespace.yaml
-images:
-  - name: tokenendpoint:0.1
-    newName: eu.gcr.io/iona-1/tokenendpoint
-    newTag: iona-latest
-namespace: tokenator
+patchesStrategicMerge:
+  - deployment-volumes.yaml
+configMapGenerator:
+  - name: tokenator
+    files:
+      - clients.json
+    literals:
+      - SIGNING_SECRET_FILE=/config/provider-signing-key.json
+      - CLIENTS_FILE=/config/clients.json
+      - CLIENT_SCOPES=["email", "openid", "rpc://admin_nodeInfo", "rpc://eth_blockNumber", "rpc://eth_*", "rpc://rpc_modules"]
+      - PROVIDER=https://sts.iona.thaumagen.io
+      - PATH_PREFIX=""
+
+secretGenerator:
+  - name: tokenator-provider-signing-key
+    files:
+      - provider-signing-key.json

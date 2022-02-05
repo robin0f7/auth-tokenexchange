@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tokenendpoint
+spec:
+  template:
+    spec:
+      volumes:
+        - name: config
+          projected:
+            sources:
+              - configMap:
+                  name: tokenator
+                  items:
+                    - key: clients.json
+                      path: clients.json
+              - secret:
+                  name: tokenator-provider-signing-key
+                  items:
+                    - key: provider-signing-key.json
+                      path: provider-signing-key.json

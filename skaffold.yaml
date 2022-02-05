@@ -3,27 +3,34 @@ apiVersion: skaffold/v2beta10
 kind: Config
 build:
   tagPolicy:
-    gitCommit:
-      prefix: latest-
-  local:
-    push: false
-    concurrency: 8
-    useBuildkit: true
+    sha256: {}
   artifacts:
     - image: tokenendpoint
       context: tokenendpoint
-    - image: redis-cli
-      context: redis-cli
+    # - image: redis-cli
+    #   context: redis-cli
+
+deploy:
+  kustomize:
+    paths:
+      - k8s/iona
 
 profiles:
-  - name: cloud
+
+  - name: cloudbuild
+    build:
+      googleCloudBuild: {}
+
+  - name: local
+    build:
+      local:
+        push: false
+        concurrency: 8
+        useBuildkit: true
+
+  - name: push
     build:
       local:
         push: true
         concurrency: 8
         useBuildkit: true
-      artifacts:
-        - image: tokenendpoint
-          context: tokenendpoint
-        - image: redis-cli
-          context: redis-cli

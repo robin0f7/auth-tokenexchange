@@ -3,25 +3,33 @@ version: '3'
 silent: true
 
 env:
-  # The following to are specific to go-rrr ci/cd
-  SKAFFOLD_DEFAULT_REPO: "eu.gcr.io/iona-1"
-  KUBECTL: kubectl
-  PYENV: env
+  CONTEXT: iona-1
+  CLUSTER: gke_iona-1_europe-west2-a_kluster
+  KUBECTL: kubectl --context {{.CONTEXT}} --cluster {{.CLUSTER}}
+  KUSTOMIZE: kustomize
+  CLUSTER_NAMESPACE: iona
+  NAMESPACE: '{{.NAMESPACE | default .CLUSTER_NAMESPACE}}'
 
-  # this is likely expired 
-  DEFAULT_ID_TOKEN: eyJhbGciOiJSUzI1NiIsImtpZCI6IjM1MDZmMzc1MjI0N2ZjZjk0Y2JlNWQyZDZiNTlmYThhMmJhYjFlYzIiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiUm9iaW4gQnJ5Y2UiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUFUWEFKd2xuTjdqc25lMkYtdFp6VUdtRWNDWlN4QzN1MGtOdUtSWUVYZkM9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vaW9uYS0xIiwiYXVkIjoiaW9uYS0xIiwiYXV0aF90aW1lIjoxNjQxMzA1ODcxLCJ1c2VyX2lkIjoiWnl0aVp2TkdCelBlVjN3a0ZGdU51NjhDZ2E3MiIsInN1YiI6Ilp5dGladk5HQnpQZVYzd2tGRnVOdTY4Q2dhNzIiLCJpYXQiOjE2NDE2NjcyNjksImV4cCI6MTY0MTY3MDg2OSwiZW1haWwiOiJyb2JpbmJyeWNlQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTExMjgwOTA4OTkyMzQxNDA2Nzg0Il0sImVtYWlsIjpbInJvYmluYnJ5Y2VAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoiZ29vZ2xlLmNvbSIsInRlbmFudCI6InB1YmxpYy02OWN2ZiJ9fQ.QE3S7cxh3FwUo8NiHl7s3kal5TjWWMCLWlzDzQ0CTyZiOjYt9VDM-AARPU05IV95Fv_lerWAPmQyd3zuP58vnLtFot6SJMbd91WFRWphQW54Ah8Qj1N43w-gYE22t0IY7iDKl-kVir3sW7PHMXvP_fegyYxljyo7ETHd3PHyvZjH_qxwojay5KUOxcKHUdQHHWdvltlPUzdDaKiPDoj5Awiz_hRn7P4uy9lhLLT7aX5EIgFI0oc02qh_jJDwojOfVXzUZBZQVUQ3Z_0z9l3MsacpfWV_sc_XBFZ_pBPviHyYdJUcRcW_IEhQSfLeGeaUYZZiEsD6FbqrvGJnEbVuyg
+  APPNAME: '{{.APPNAME | default "authex"}}'
+  PYENV: '{{.PYENV | default "env"}}'
+
+  SKAFFOLD_DEFAULT_REPO: '{{.SKAFFOLD_DEFAULT_REPO | default "eu.gcr.io/iona-1"}}'
+  PROFILE: '{{.PROFILE | default "local"}}'
+  TAG: '{{.TAG | default "iona-latest"}}'
+  PORT: '{{.PORT | default "8401"}}'
+  HOST: '{{.HOST | default "http://127.0.0.1:8401"}}'
+  # the default will be expired
+  TOKEN: '{{.TOKEN | default "xxxinvalidxxx"}}'
+  EXPIRED_TOKEN: '{{.EXPIRED_TOKEN | default "eyJhbGciOiJSUzI1NiIsImtpZCI6IjM1MDZmMzc1MjI0N2ZjZjk0Y2JlNWQyZDZiNTlmYThhMmJhYjFlYzIiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiUm9iaW4gQnJ5Y2UiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUFUWEFKd2xuTjdqc25lMkYtdFp6VUdtRWNDWlN4QzN1MGtOdUtSWUVYZkM9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vaW9uYS0xIiwiYXVkIjoiaW9uYS0xIiwiYXV0aF90aW1lIjoxNjQxMzA1ODcxLCJ1c2VyX2lkIjoiWnl0aVp2TkdCelBlVjN3a0ZGdU51NjhDZ2E3MiIsInN1YiI6Ilp5dGladk5HQnpQZVYzd2tGRnVOdTY4Q2dhNzIiLCJpYXQiOjE2NDE2NjcyNjksImV4cCI6MTY0MTY3MDg2OSwiZW1haWwiOiJyb2JpbmJyeWNlQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7Imdvb2dsZS5jb20iOlsiMTExMjgwOTA4OTkyMzQxNDA2Nzg0Il0sImVtYWlsIjpbInJvYmluYnJ5Y2VAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoiZ29vZ2xlLmNvbSIsInRlbmFudCI6InB1YmxpYy02OWN2ZiJ9fQ.QE3S7cxh3FwUo8NiHl7s3kal5TjWWMCLWlzDzQ0CTyZiOjYt9VDM-AARPU05IV95Fv_lerWAPmQyd3zuP58vnLtFot6SJMbd91WFRWphQW54Ah8Qj1N43w-gYE22t0IY7iDKl-kVir3sW7PHMXvP_fegyYxljyo7ETHd3PHyvZjH_qxwojay5KUOxcKHUdQHHWdvltlPUzdDaKiPDoj5Awiz_hRn7P4uy9lhLLT7aX5EIgFI0oc02qh_jJDwojOfVXzUZBZQVUQ3Z_0z9l3MsacpfWV_sc_XBFZ_pBPviHyYdJUcRcW_IEhQSfLeGeaUYZZiEsD6FbqrvGJnEbVuyg"}}'
 
 dotenv: [".env", '{{.ENV}}/.env', '{{.HOME}}/.env']
   
-  # sh: echo {{._DEFAULT_ID_TOKEN}} | tr -d ' '
 tasks:
 
   bootstrap-debian:
     desc: |
       install tooling on debain like systems. for other platforms run `task
       bootstrap-debian --sumarize` and use the results to find the right bits.
-    env:
-      PYENV: '{{default "env" .PYENV}}'
     cmds:
       - |
         python3 -m venv ${PYENV}
@@ -31,57 +39,55 @@ tasks:
 
   build:
     desc: 'build the images'
-    env:
-      # PROFILE: "cloud"
-      PROFILE: '{{default "cloud" .PROFILE}}'
-      TAG: '{{default "" .TAG}}'
     cmds:
       - |
-        CMD="skaffold build ${PROFILE:+-p $PROFILE} ${TAG:+-t $TAG}"
-        echo $CMD && $CMD
+        skaffold build ${PROFILE:+-p $PROFILE} ${TAG:+-t $TAG}
+
+  skaffold-deploy:
+    desc: 'build and deploy the images'
+    env:
+      PROFILE: '{{.PROFILE | default "push"}}'
+    cmds:
+      - |
+        skaffold build -q ${PROFILE:+-p $PROFILE} ${TAG:+-t $TAG} | skaffold deploy --build-artifacts -
+
   up:
     desc: 'deploy the k8s manifests'
     cmds:
       - |
-        kustomize build k8s/iona | kubectl apply -f -
+        $KUSTOMIZE build k8s/iona-apply | $KUBECTL apply -f -
   down:
     desc: 'deploy the k8s manifests'
     cmds:
       - |
-        kustomize build k8s/iona | kubectl delete -f -
+        $KUSTOMIZE build k8s/iona-apply | kubectl delete -f -
 
   discodoc:
     desc: fetch .well-known/openid-configuration
-    env:
-      URL: '{{default "http://localhost:3000/token" .URL}}'
-
     cmds:
       - |
         curl -s http://localhost:3000/.well-known/openid-configuration | jq -r
         # curl -s ${URL}/.well-known/openid-configuration
 
   blockheight:
-    env:
-      TOKEN: invalid
-      URL: https://127.0.0.1:8300
     cmds:
       - |
-        curl -k $URL/ \
+        curl -v -k $HOST \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: application/json" \
           --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":83}'
-        
   stx:
     desc: |
       do a secure token exchange
       ID  CLIENT_ID  (of the service requesting the token exchange)     defaults: {{.ID}}
       S   SECRET     (of the service requesting the token exchange)               {{.S}}
-      TOKEN                    {{.DEFAULT_ID_TOKEN}}
+      TOKEN                    ""
       URL for token endpoint   {{.URL}}
     env:
-      ID: '{{default "iona-1" .ID}}'
-      S: '{{default "iona-1-password" .S}}'
-      URL: '{{default "http://localhost:3000/token" .URL}}'
+      ID: '{{.ID | default "iona-1"}}'
+      S: '{{.S | default "iona-1-password"}}'
+      URL: '{{.URL | default "http://localhost:3000/token"}}'
+      TOKEN: '{{.TOKEN | default ""}}'
     cmds:
       - |
         curl -X POST \
@@ -95,7 +101,7 @@ tasks:
           --data-urlencode "subject_token=${TOKEN}" \
           --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
           --data-urlencode "audience=ethnode0" \
-          --data-urlencode "resource=https://nodes.iona.thaumagen.com/ethnode0"
+          --data-urlencode "resource=https://iona.thaumagen.com/node/ethnode0"
 
 
   client-credentials:
@@ -104,9 +110,9 @@ tasks:
       S   SECRET                    {{.S}}
       URL for token endpoint        {{.URL}}
     env:
-      ID: '{{default "client-1" .ID}}'
-      S: '{{default "password" .S}}'
-      URL: '{{default "http://localhost:3000/token" .URL}}'
+      ID: '{{.ID | default "iona-1"}}'
+      S: '{{.S | default "iona-1-password"}}'
+      URL: '{{.URL | default "http://localhost:3000/token"}}'
     cmds:
       - |
         echo ": $ID $S $URL"
@@ -122,10 +128,8 @@ tasks:
     desc: 'port forward to redis'
     cmds:
       - |
-        POD=$({{.KUBECTL}} -n tokenator get pod \
+        POD=$($KUBECTL -n tokenator get pod \
            --selector=app=redisproxy \
            --no-headers -o custom-columns=":metadata.name")
         echo $POD
-        # {{.KUBECTL}} -n {{.N}} port-forward --address localhost pod/$POD 8080
-        {{.KUBECTL}} -n tokenator port-forward pod/$POD 6397
-
+        $KUBECTL -n tokenator port-forward pod/$POD 6397

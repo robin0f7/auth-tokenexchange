@@ -1,0 +1,10 @@
+[
+    {
+      "client_id": "iona-1",
+      "client_secret": "iona-1-password",
+      "response_types": [],
+      "redirect_uris": [],
+      "id_token_signed_response_alg": "ES256",
+      "scope": "email openid rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules"
+    }
+ ]
