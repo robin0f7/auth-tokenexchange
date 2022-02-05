@@ -9,6 +9,7 @@ options:
   secret:
     short: s
     default: iona-1-password
+
   stsurl:
     short: u
     default: https://sts.iona.thaumagen.io/token
@@ -54,7 +55,11 @@ tasks:
 
 
   localhost-blockheight:
-    usage: get block height using exchanged token obtained (localhost token exchange)
+    usage: |
+      get block height using exchanged token obtained (localhost token exchange)
+
+      this method by passes traefik forwardauth and authex and can be used to
+      check the node configuration.
     run:
       - command:
           exec: |
@@ -83,9 +88,6 @@ tasks:
       - command:
           exec: |
             set -e
-            ID=${clientid}
-            S=${secret}
-            URL=${stsurl}
             TOKEN=${token}
             if [ "${TOKEN}" == "" ]; then
               TOKEN=$(cat .token)
@@ -94,9 +96,9 @@ tasks:
             EXCHANGED=$(curl -X POST \
               -H 'content-type: application/x-www-form-urlencoded' \
               -H 'x-forwarded-proto: https' \
-              --url "${URL}" \
-              --data-urlencode "client_id=${ID}" \
-              --data-urlencode "client_secret=${S}" \
+              --url "${stsurl}" \
+              --data-urlencode "client_id=${clientid}" \
+              --data-urlencode "client_secret=${secret}" \
               --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
               --data-urlencode "scope=rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules" \
               --data-urlencode "subject_token=${TOKEN}" \
@@ -105,3 +107,17 @@ tasks:
               --data-urlencode "resource=https://iona.thaumagen.com/node/ethnode0" 2>/dev/null)
             ${verbose} && echo $EXCHANGED
             echo $EXCHANGED | jq -r .access_token
+
+
+  client-credentials:
+    usage: |
+    run:
+      - command: |
+          echo ": ${clientid} ${secret} ${stsurl}"
+          curl -X POST \
+            -H 'content-type: application/x-www-form-urlencoded' \
+            -H 'x-forwarded-proto: https' \
+            --url "${stsurl}" \
+            --data-urlencode 'grant_type=client_credentials' \
+            --data-urlencode "client_id=${clientid}" \
+            --data-urlencode "client_secret=${secret}"

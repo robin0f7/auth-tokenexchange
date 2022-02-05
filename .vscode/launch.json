@@ -24,42 +24,12 @@
                 }
             ]
         },
-
-        {
-            "name": "josekeys -t RSA",
-            "request": "launch",
-            "type": "python",
-            "python": "${workspaceFolder}/env/bin/python3",
-            "program": "${workspaceFolder}/py/josekeys.py",
-            "args": [
-                "jwk",
-                "-t",
-                "RSA",
-                "-s",
-                "4096"
-            ]
-        },
         {
             "type": "node",
             "request": "attach",
             "name": "Docker: Attach to Node",
             "localRoot": "${workspaceFolder}/tokenendpoint",
             "remoteRoot": "/tokenendpoint"
-        },
-        {
-            "type": "pwa-node",
-            "request": "launch",
-            "name": "Launch Program",
-            "env": {
-                "GCP_PROJECT": "iona-1",
-                "SIGNING_SECRET_FILE": "${workspaceFolder}/credentials/provider-signing-key.jwk",
-                "CLIENTS_FILE": "${workspaceFolder}/credentials/clients.json",
-                "REDIS_URL": "redis://store"
-            },
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}/tokenendpoint/index.js"
         }
     ]
 }

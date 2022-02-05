@@ -1,6 +1,6 @@
 namespace: iona
 resources:
-  - ./../base/tokenendpoint
+  - ./../tokenendpoint
 patchesStrategicMerge:
   - deployment-volumes.yaml
 configMapGenerator:

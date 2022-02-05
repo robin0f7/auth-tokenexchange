@@ -7,13 +7,12 @@ build:
   artifacts:
     - image: tokenendpoint
       context: tokenendpoint
-    # - image: redis-cli
-    #   context: redis-cli
 
 deploy:
   kustomize:
     paths:
-      - k8s/iona
+      #- k8s/iona
+      - k8s/rrr9
 
 profiles:
 
