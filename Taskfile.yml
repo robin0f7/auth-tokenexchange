@@ -16,12 +16,6 @@ dotenv: [".env", '{{.ENV}}/.env', '{{.HOME}}/.env']
 
 tasks:
 
-  test:
-    desc: dummy
-    cmds:
-      - |
-        env
-
   bootstrap:
     desc: |
       creates the {{.ENV}}/.env file and installs tooling. assumes a debain
@@ -70,14 +64,14 @@ tasks:
       APPNAME: '{{.APPNAME | default "sts"}}'
       PYENV: '{{.PYENV | default "env"}}'
       PROFILE: '{{.PROFILE | default "local"}}'
-      PORT: '{{.PORT | default "8401"}}'
-      HOST: '{{.HOST | default "http://127.0.0.1:8401"}}'
+      PORT: '{{.PORT | default "3000"}}'
+      HOST: '{{.HOST | default "http://127.0.0.1:3000"}}'
       TOKEN: '{{.TOKEN | default "xxxinvalidxxx"}}'
       CLIENT_SCOPES: '{{.CLIENT_SCOPES | default "email openid rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules"}}'
       DOMAIN: '{{.DOMAIN | default "localhost"}}'
 
   generate:
-    desc: 'generate secrets and so on'
+    desc: 'generate context dependent manifests and secrets and so on'
     cmds:
       - |
         mkdir -p {{.K8S_GENERATE_DIR}}/dev
@@ -131,6 +125,9 @@ tasks:
           - name: tokenendpoint-provider-signing-key
             files:
               - provider-signing-key.json
+          - name: tokenendpoint-clientid-secret
+            envs:
+              - clientidsecret.env
         EOF
 
     env:
@@ -140,6 +137,8 @@ tasks:
         sh: echo "$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c16)"
 
     generates:
+      - "{{.K8S_GENERATE_DIR}}/dev/kustomization.yaml"
+      - "{{.K8S_GENERATE_DIR}}/dev/namespace.yaml"
       - "{{.K8S_GENERATE_DIR}}/dev/clients.json"
       - "{{.K8S_GENERATE_DIR}}/dev/clientidsecret.env"
       - "{{.K8S_GENERATE_DIR}}/dev/provider-signing-key.json"

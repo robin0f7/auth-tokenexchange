@@ -2,42 +2,38 @@
 
 Derive tokens for internal services based on id tokens & custom claims from federated oauth2/openid connect providers
 
-## Start Here
+## alowed scopes (this is tbd)
 
-tokenator/rrr docker-compose up
-runs rrr network
+* [ ] provider has master white list. no one gets anything not in that.
+* [/] the client config for the relying party gets a white list that can further limit the scopes for tokens exchanged by that client id
+* [ ] the identity in each token is looked up in the storage fronted by our adapter.js. If a record is found, it limits the scopes available to that specific identity.
+* [ ] Otherwise a default scope whitelist for identities not known to the adapter backend is applied.
 
-tokenator docker-compose up
-runs the exchange on the same network as rrr
+# Tooling
 
-tokenator/rrr/rrr/node0
+## Usage from 1st checkout
 
-plugins.json && tokenator-config.json configure the json-rpc api security and the integration with tokenendpoint
+1. clone the repo
+2. task bootstrap NAMESPACE=yourchoice
+   SKAFFOLD_DEFAULT_REPO defaults to eu.gcr.io/$(kubectl config current-context).
+   If that doesn't suit, add SKAFFOLD_DEFAULT_REPO=yourchoice to the bootstrap
+   overrides.
+3. task generate CLIENTID_SECRET_FILE=path/to/clientidsecrets.env
+  after the first run, you don't need to pass CLIENTID_SECRET_FILE again if
+  re-generating other materials
+4. task build
+5. task deploy
 
-# Plan
+## Manifests & cluster requirements
 
-* [ ] Load the provider white list of allowed api scopes (which limit the client scopes) from configmap
-* [ ] Load client configuration from config map (for now)
-* [ ] deploy to cluster and get explicit curl exchange working
-* [ ] Try traefik ForwardAuth with the deployed tokenator
-* [ ] Add iam identity & service account for the node token exchange if we need one
-* [ ] make this specific to making tokens for geth rpcs
-* [ ] In the token exchange, look  up the identity in the adapter and read the per identity scopes from redis
-* [ ] OPTIONALY load the signing key from GPC Secrets (will need service account here for sure)
-* [ ] Add GCP Secrets to tf
-* [ ] Add benchblock support for JSON-API Security config docker & k8s
-* [ ] Add support for RS256 id_token_signed_response_alg (and put an RSA key in the providers signing key set)
-* [ ] Remove all interactions
+The kubernetes manifests assume the presence of a traefik proxy instance with
+the kubernetes CRD provider enabled. If the RBAC rules don't allow the instance
+to watch all namespaces, set the NAMESPACE variable to match treafiks when
+bootstraping
 
+If not using GCP, be sure to set SKAFFOLD_DEFAULT_REPO when bootstraping
 
-## alowed scopes
+## Taskfile conventions
 
-* provider has master white list. no one gets anything not in that.
-* the client config for the relying party gets a white list that can further limit the scopes for tokens exchanged by that client id
-* the identity in each token is looked up in the storage fronted by our adapter.js. If a record is found, it limits the scopes available to that specific identity.
-* Otherwise a default scope whitelist for identities not known to the adapter backend is applied.
-
-
-Use traefik's AuthForward to do the token exchange. Can try that now, even
-though the permisions on the token arent perfect. That should let us use tls
-issuer
+The current kubernetes context when bootstraping is *sticky*. Tasks all set the
+kubernetes context explicitly to the value recorded when bootstrap ran.

@@ -19,9 +19,8 @@ spec:
           # target for https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/all-in-one-volume.md
           # sources:
       containers:
-        - name: tokenendpoint
+        - name: service
           image: tokenendpoint
-          imagePullPolicy: Always
           ports:
             - containerPort: 3000
 
