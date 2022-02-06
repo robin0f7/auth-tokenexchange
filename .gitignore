@@ -1,5 +1,3 @@
-credentials
+.token
+.local
 env
-py/__pycache__
-py/pytokenator.egg-info
-k8s/iona/provider-signing-key.json

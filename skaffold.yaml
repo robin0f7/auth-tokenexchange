@@ -3,7 +3,17 @@ apiVersion: skaffold/v2beta10
 kind: Config
 build:
   tagPolicy:
-    sha256: {}
+    gitCommit:
+      variant: AbbrevCommitSha
+    # dateTime is nice for introspection but the tags change every build
+    #dateTime:
+    #  format: "20060102.1504.05"
+    #  timezone: UTC
+  local:
+    push: true
+    concurrency: 8
+    useBuildkit: true
+
   artifacts:
     - image: tokenendpoint
       context: tokenendpoint
@@ -12,24 +22,12 @@ deploy:
   kustomize:
     paths:
       #- k8s/iona
-      - k8s/rrr9
+      - k8s/tmp/dev
 
 profiles:
-
-  - name: cloudbuild
-    build:
-      googleCloudBuild: {}
-
   - name: local
     build:
       local:
         push: false
-        concurrency: 8
-        useBuildkit: true
-
-  - name: push
-    build:
-      local:
-        push: true
         concurrency: 8
         useBuildkit: true

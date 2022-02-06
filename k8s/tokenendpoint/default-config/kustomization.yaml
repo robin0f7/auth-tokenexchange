@@ -1,0 +1,8 @@
+configMapGenerator:
+  - name: tokenendpoint
+    literals:
+      - SIGNING_SECRET_FILE=/config/provider-signing-key.json
+      - CLIENTS_FILE=/config/clients.json
+      - PATH_PREFIX=""
+      - PROVIDER=https://localhost
+      - CLIENT_SCOPES=["email", "openid", "rpc://admin_nodeInfo", "rpc://eth_blockNumber", "rpc://eth_*", "rpc://rpc_modules"]

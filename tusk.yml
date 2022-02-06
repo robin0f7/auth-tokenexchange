@@ -5,10 +5,8 @@ usage: conveniences and ergonomics for tokenator
 options:
   clientid:
     short: i
-    default: iona-1
   secret:
     short: s
-    default: iona-1-password
 
   stsurl:
     short: u
@@ -34,6 +32,13 @@ options:
 
 tasks:
 
+  localhost-discodoc:
+    usage: fetch .well-known/openid-configuration
+    run:
+      - command: |
+          curl -s http://localhost:3000/.well-known/openid-configuration | jq -r
+          # curl -s ${URL}/.well-known/openid-configuration
+
   blockheight:
     usage: get block height using exchanged token
     run:
@@ -48,7 +53,7 @@ tasks:
             echo $TOKEN
 
             curl -v -k \
-              --data '{"jsonrpc": "2.0","method": "eth_blockNumber","params": [],"id": 0}' \
+              --data '{"jsonrpc": "2.0","method": "admin_nodeInfo","params": [],"id": 0}' \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer ${TOKEN}" \
               ${nodeurl}
@@ -87,24 +92,28 @@ tasks:
     run:
       - command:
           exec: |
-            set -e
+            set -ex
             TOKEN=${token}
             if [ "${TOKEN}" == "" ]; then
               TOKEN=$(cat .token)
             fi
 
+            source k8s/tmp/dev/clientidsecret.env
+            [ -n "${clientid}" ] && CLIENT_ID=${clientid}
+            [ -n "${secret}" ] && CLIENT_ID=${secret}
+
             EXCHANGED=$(curl -X POST \
               -H 'content-type: application/x-www-form-urlencoded' \
               -H 'x-forwarded-proto: https' \
               --url "${stsurl}" \
-              --data-urlencode "client_id=${clientid}" \
-              --data-urlencode "client_secret=${secret}" \
+              --data-urlencode "client_id=${CLIENT_ID}" \
+              --data-urlencode "client_secret=${CLIENT_SECRET}" \
               --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
               --data-urlencode "scope=rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules" \
               --data-urlencode "subject_token=${TOKEN}" \
               --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
               --data-urlencode "audience=ethnode0" \
-              --data-urlencode "resource=https://iona.thaumagen.com/node/ethnode0" 2>/dev/null)
+              --data-urlencode "resource=https://iona.thaumagen.com/node/ethnode0")
             ${verbose} && echo $EXCHANGED
             echo $EXCHANGED | jq -r .access_token
 
@@ -113,7 +122,12 @@ tasks:
     usage: |
     run:
       - command: |
-          echo ": ${clientid} ${secret} ${stsurl}"
+
+          source k8s/tmp/dev/clientidsecret.env
+          [ -n "${clientid}" ] && CLIENT_ID=${clientid}
+          [ -n "${secret}" ] && CLIENT_ID=${secret}
+
+          echo ": ${CLIENT_ID} ${CLIENT_SECRET} ${stsurl}"
           curl -X POST \
             -H 'content-type: application/x-www-form-urlencoded' \
             -H 'x-forwarded-proto: https' \

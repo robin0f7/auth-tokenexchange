@@ -3,3 +3,6 @@ commonLabels:
 resources:
   - service.yaml
   - deployment.yaml
+  # - default-config/configmap.yaml
+patchesStrategicMerge:
+  - deployment-volumes.yaml

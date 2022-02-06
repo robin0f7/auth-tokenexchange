@@ -3,72 +3,172 @@ version: '3'
 silent: true
 
 env:
-  CONTEXT: iona-1
-  CLUSTER: gke_iona-1_europe-west2-a_kluster
-  KUBECTL: kubectl --context {{.CONTEXT}} --cluster {{.CLUSTER}}
-  KUSTOMIZE: kustomize
-  CLUSTER_NAMESPACE: iona
-  NAMESPACE: '{{.NAMESPACE | default .CLUSTER_NAMESPACE}}'
-  APPNAME: '{{.APPNAME | default "authex"}}'
-  PYENV: '{{.PYENV | default "env"}}'
-  SKAFFOLD_DEFAULT_REPO: '{{.SKAFFOLD_DEFAULT_REPO | default "eu.gcr.io/iona-1"}}'
-  PROFILE: '{{.PROFILE | default "local"}}'
-  TAG: '{{.TAG | default "iona-latest"}}'
-  PORT: '{{.PORT | default "8401"}}'
-  HOST: '{{.HOST | default "http://127.0.0.1:8401"}}'
-  TOKEN: '{{.TOKEN | default "xxxinvalidxxx"}}'
+  ENV: .local/dev
+  PROFILE: '{{.PROFILE | default ""}}'
+  # This override is provided so that the generate task can be used to
+  # quick start consumers of this repository with useful defaults.
+  K8S_GENERATE_DIR: '{{.K8S_GENERATE_DIR | default "k8s/tmp"}}'
+
+vars:
+  BUILD_ARTIFACTS: k8s/tmp/skaffold/build-artifacts.json
 
 dotenv: [".env", '{{.ENV}}/.env', '{{.HOME}}/.env']
 
 tasks:
 
-  bootstrap-debian:
+  test:
+    desc: dummy
+    cmds:
+      - |
+        env
+
+  bootstrap:
     desc: |
-      install tooling on debain like systems. for other platforms run `task
-      bootstrap-debian --sumarize` and use the results to find the right bits.
+      creates the {{.ENV}}/.env file and installs tooling. assumes a debain
+      like system (but uses python or brew where possible). for other platforms
+      run `task bootstrap --sumarize` and use the results to find the right
+      bits.  Note that .env (in the directory containing this Taskfile) is
+      never created or touched in anyway and has the highest precedence
+
+      NOTICE: to re-create {{.ENV}}/.env you MUST delete it first (else it will
+      be re-created with the same values
+
     cmds:
       - |
         python3 -m venv ${PYENV}
         ${PYENV}/bin/pip3 install -r requirements.txt
+        mkdir -p {{.ENV}}
 
+        CONTEXT=${CONTEXT:-$(kubectl config current-context)}
+        CLUSTER=$(kubectl config get-contexts ${CONTEXT} --no-headers=true | tr -s ' ' | cut -d ' ' -f3)
+        SKAFFOLD_DEFAULT_REPO=${SKAFFOLD_DEFAULT_REPO:-eu.gcr.io/${CONTEXT}}
+        CONTEXT_NAMESPACE=${CONTEXT_NAMESPACE:-$(echo ${CONTEXT} | cut -d '-' -f1)}
+        NAMESPACE=${NAMESPACE:-${CONTEXT_NAMESPACE}-${APPNAME}}
+        DOMAIN=${DOMAIN:-localhost}
+
+        cat <<EOF > {{.ENV}}/.env
+        CONTEXT=${CONTEXT}
+        CLUSTER=${CLUSTER}
+        SKAFFOLD_DEFAULT_REPO=${SKAFFOLD_DEFAULT_REPO}
+        CONTEXT_NAMESPACE=${CONTEXT_NAMESPACE}
+        NAMESPACE=${NAMESPACE}
+        APPNAME=${APPNAME}
+        PYENV=${PYENV}
+        PORT=${PORT}
+        HOST=${HOST}
+        TOKEN=${TOKEN}
+        CLIENT_SCOPES=${CLIENT_SCOPES}
+        DOMAIN=${DOMAIN}
+        EOF
+
+    env:
+      CONTEXT: "{{.CONTEXT}}"
+      CONTEXT_NAMESPACE: "{{.CONTEXT_NAMESPACE}}"
+      NAMESPACE: "{{.NAMESPACE}}"
+      TAG: "{{.TAG}}"
+      SKAFFOLD_DEFAULT_REPO: "{{.SKAFFOLD_DEFAULT_REPO}}"
+      APPNAME: '{{.APPNAME | default "sts"}}'
+      PYENV: '{{.PYENV | default "env"}}'
+      PROFILE: '{{.PROFILE | default "local"}}'
+      PORT: '{{.PORT | default "8401"}}'
+      HOST: '{{.HOST | default "http://127.0.0.1:8401"}}'
+      TOKEN: '{{.TOKEN | default "xxxinvalidxxx"}}'
+      CLIENT_SCOPES: '{{.CLIENT_SCOPES | default "email openid rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules"}}'
+      DOMAIN: '{{.DOMAIN | default "localhost"}}'
 
   generate:
     desc: 'generate secrets and so on'
     cmds:
       - |
-        ${PYENV}/bin/josekeys jwk \
-          -t EC -a ES256 -c P-256 -u sig > k8s/iona/provider-signing-key.json
+        mkdir -p {{.K8S_GENERATE_DIR}}/dev
+        mkdir -p $(dirname {{.BUILD_ARTIFACTS}})
+
+        cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/clients.json
+        [
+            {
+              "client_id": "${CLIENT_ID}",
+              "client_secret": "${CLIENT_SECRET}",
+              "response_types": [],
+              "redirect_uris": [],
+              "id_token_signed_response_alg": "ES256",
+              "scope": "{{.CLIENT_SCOPES}}"
+            }
+         ]
+        EOF
+        cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/clientidsecret.env
+        CLIENT_ID=${CLIENT_ID}
+        CLIENT_SECRET=${CLIENT_SECRET}
+        EOF
+
+        cat <<PYEND | python3 > {{.K8S_GENERATE_DIR}}/dev/provider-signing-key.json
+        import json
+        import jwcrypto.jwk
+        key = jwcrypto.jwk.JWK.generate(kty="EC", alg="ES256", crv="P-256", use="sig")
+        jwk = key.export(as_dict=True)
+        print(json.dumps(jwk, sort_keys=True, indent=2))
+        PYEND
+
+        cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/namespace.yaml
+        kind: Namespace
+        apiVersion: v1
+        metadata:
+          name: ${NAMESPACE}
+        EOF
+        cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/kustomization.yaml
+        namespace: ${NAMESPACE}
+        resources:
+          - ./namespace.yaml
+          - ./../../tokenendpoint/default-config
+          - ./../../tokenendpoint
+        configMapGenerator:
+          - name: tokenendpoint
+            behavior: merge
+            files:
+              - clients.json
+            literals:
+              - PROVIDER=https://${APPNAME}.${CONTEXT_NAMESPACE}.${DOMAIN}
+        secretGenerator:
+          - name: tokenendpoint-provider-signing-key
+            files:
+              - provider-signing-key.json
+        EOF
+
+    env:
+      CLIENT_ID:
+        sh: echo {{.NAMESPACE}}
+      CLIENT_SECRET:
+        sh: echo "$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c16)"
+
     generates:
-      - k8s/iona/provider-signing-key.json
+      - "{{.K8S_GENERATE_DIR}}/dev/clients.json"
+      - "{{.K8S_GENERATE_DIR}}/dev/clientidsecret.env"
+      - "{{.K8S_GENERATE_DIR}}/dev/provider-signing-key.json"
 
   build:
     desc: 'build the images'
     cmds:
       - |
-        skaffold build ${PROFILE:+-p $PROFILE} ${TAG:+-t $TAG}
+        skaffold build \
+          ${PROFILE:+-p $PROFILE} \
+          ${TAG:+-t $TAG} \
+          --file-output {{.BUILD_ARTIFACTS}}
 
-  skaffold-deploy:
-    desc: 'build and deploy the images'
-    env:
-      PROFILE: '{{.PROFILE | default "push"}}'
+  deploy:
+    desc: 'deploy the app using skaffold'
+    precondition:
+      - test: -f {{.BUILD_ARTIFACTS}}
+        msg: "{{.BUILD_ARTIFACTS}} is missing, run `task build` first"
     cmds:
       - |
-        skaffold build -q ${PROFILE:+-p $PROFILE} ${TAG:+-t $TAG} | skaffold deploy --build-artifacts -
+        skaffold deploy \
+            ${CONTEXT:+--kube-context ${CONTEXT}} \
+            ${NAMESPACE:+-n $NAMESPACE} \
+            --build-artifacts {{.BUILD_ARTIFACTS}}
 
-  up:
-    desc: 'deploy the k8s manifests'
-    cmds:
-      - |
-        $KUSTOMIZE build k8s/iona | $KUBECTL apply -f -
   down:
-    desc: 'deploy the k8s manifests'
+    desc: 'take the app down and clean up the k8s resources'
     cmds:
       - |
-        $KUSTOMIZE build k8s/iona | kubectl delete -f -
-
-  discodoc:
-    desc: fetch .well-known/openid-configuration
-    cmds:
-      - |
-        curl -s http://localhost:3000/.well-known/openid-configuration | jq -r
-        # curl -s ${URL}/.well-known/openid-configuration
+        skaffold delete \
+            ${CONTEXT:+--kube-context ${CONTEXT}} \
+            ${NAMESPACE:+-n $NAMESPACE}

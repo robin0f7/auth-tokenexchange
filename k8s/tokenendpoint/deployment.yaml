@@ -29,28 +29,28 @@ spec:
             - name: PROVIDER
               valueFrom:
                 configMapKeyRef:
-                  name: tokenator
+                  name: tokenendpoint
                   key: PROVIDER
             - name: PATH_PREFIX
               valueFrom:
                 configMapKeyRef:
-                  name: tokenator
+                  name: tokenendpoint
                   key: PATH_PREFIX
             - name: SIGNING_SECRET_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: tokenator
+                  name: tokenendpoint
                   key: SIGNING_SECRET_FILE
             - name: CLIENTS_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: tokenator
+                  name: tokenendpoint
                   key: CLIENTS_FILE
 
             - name: CLIENT_SCOPES
               valueFrom:
                 configMapKeyRef:
-                  name: tokenator
+                  name: tokenendpoint
                   key: CLIENT_SCOPES
 
           volumeMounts:
