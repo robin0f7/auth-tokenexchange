@@ -3,10 +3,6 @@ name: tok8
 usage: conveniences and ergonomics for tokenator
 
 options:
-  clientid:
-    short: i
-  secret:
-    short: s
 
   stsurl:
     short: u
@@ -38,6 +34,17 @@ tasks:
       - command: |
           curl -s http://localhost:3000/.well-known/openid-configuration | jq -r
           # curl -s ${URL}/.well-known/openid-configuration
+
+  delete-failed:
+    options:
+      namespace:
+        short: "n"
+    run:
+      - command:
+          exec: |
+            for name in $(kubectl -n ${namespace} get pod --field-selector status.phase=Failed -o name); do
+              kubectl -n ${namespace} delete $name
+            done
 
   blockheight:
     usage: get block height using exchanged token
