@@ -1,7 +1,6 @@
 # Tokenator
 
 Derive tokens for internal services based on id tokens & custom claims from federated oauth2/openid connect providers
-
 ## alowed scopes (this is tbd)
 
 * [ ] provider has master white list. no one gets anything not in that.
