@@ -9,8 +9,8 @@ spec:
         - name: config
           projected:
             sources:
-              - configMap:
-                  name: tokenendpoint
+              - secret:
+                  name: tokenendpoint-clients
                   items:
                     - key: clients.json
                       path: clients.json

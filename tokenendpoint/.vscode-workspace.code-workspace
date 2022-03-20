@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../iona-app"
+		},
+		{
+			"path": "../../node-oidc-provider"
+		},
+		{
+			"path": "../../apikeys"
+		}
+	],
+	"settings": {}
+}

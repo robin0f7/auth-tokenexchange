@@ -30,6 +30,11 @@ spec:
                 configMapKeyRef:
                   name: tokenendpoint
                   key: PROVIDER
+            - name: APIKEYSTORE_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: tokenendpoint
+                  key: APIKEYSTORE_ADDRESS
             - name: PATH_PREFIX
               valueFrom:
                 configMapKeyRef:

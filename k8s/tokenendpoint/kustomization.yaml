@@ -1,8 +1,8 @@
 commonLabels:
   app.kubernetes.io/part-of: tokenator
+  repository: github.com-robinbryce-tokenator
 resources:
   - service.yaml
   - deployment.yaml
-  # - default-config/configmap.yaml
 patchesStrategicMerge:
   - deployment-volumes.yaml

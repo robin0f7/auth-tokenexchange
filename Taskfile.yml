@@ -168,6 +168,7 @@ tasks:
     desc: 'take the app down and clean up the k8s resources'
     cmds:
       - |
+        echo "STOP: this will take down the full chain1 namespace" && exit 1
         skaffold delete \
             ${CONTEXT:+--kube-context ${CONTEXT}} \
             ${NAMESPACE:+-n $NAMESPACE}

@@ -8,16 +8,25 @@
             "name": "Kubernetes: Run/Debug",
             "type": "cloudcode.kubernetes",
             "request": "launch",
+            "skaffoldFlags": {
+                "cleanup": false
+            },
             "skaffoldConfig": "${workspaceFolder}/skaffold.yaml",
-            // "profile": "cloudbuild",
             "watch": true,
-            "cleanUp": true,
+            "cleanUp": false,
             "portForward": true,
             "imageRegistry": "gcr.io/iona-1",
             "debug": [
                 {
                     "image": "tokenendpoint",
                     "containerName": "tokenendpoint",
+                    "sourceFileMap": {
+                        "${workspaceFolder}/tokenendpoint": "/tokenendpoint"
+                    }
+                },
+                {
+                    "image": "tokenendpoint",
+                    "containerName": "service",
                     "sourceFileMap": {
                         "${workspaceFolder}/tokenendpoint": "/tokenendpoint"
                     }

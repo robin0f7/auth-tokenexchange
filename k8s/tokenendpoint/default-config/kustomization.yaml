@@ -5,4 +5,5 @@ configMapGenerator:
       - CLIENTS_FILE=/config/clients.json
       - PATH_PREFIX=""
       - PROVIDER=https://localhost
+      - APIKEYSTORE_ADDRESS=apikeystore-writer:8401
       - CLIENT_SCOPES=["email", "openid", "rpc://admin_nodeInfo", "rpc://eth_blockNumber", "rpc://eth_*", "rpc://rpc_modules"]

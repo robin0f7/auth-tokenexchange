@@ -12,7 +12,8 @@
   "dependencies": {
     "@google-cloud/secret-manager": "^3.10.1",
     "express": "^4.17.2",
-    "got": "^12.0.0",
+    "got": "^12.0.1",
+    "hash-wasm": "^4.9.0",
     "ioredis": "^4.28.2",
     "jose": "^4.3.7",
     "lodash": "^4.17.21",
