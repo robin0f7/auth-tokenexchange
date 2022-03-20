@@ -47,5 +47,5 @@ jobs:
         with:
           push: true
           context: tokenendpoint
-          file: ./Dockerfile
+          file: tokenendpoint/Dockerfile
           tags: eu.gcr.io/iona-1/tokenendpoint:${{ steps.build_id.outputs.BUILD_ID }}
