@@ -24,8 +24,16 @@ jobs:
           username: 'oauth2accesstoken'
           password: '${{ steps.auth.outputs.access_token }}'
 
-      # - run: |-
-      #     echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://REGION-docker.pkg.dev
+      - run: |-
+          curl -v -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
+            -o x.png \
+            https://storage.cloud.google.com/artifacts.iona-1.appspot.com/test/tfe_logo.png
+
+          echo "hello" > hello.txt
+          curl -d @hello.txt -X PUT -v -H "Content-Type: plain/text" -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
+            https://storage.cloud.google.com/artifacts.iona-1.appspot.com/test/hello.txt
+          ls -la x.png
+          file x.png
 
       - run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io/iona-1
@@ -34,10 +42,6 @@ jobs:
           for fn in $(ls gha-creds-*.json); do
             cat $fn | jq -r .
           done
-          echo -n '${{ steps.auth.outputs.access_token }}' > xxx
-          cat xxx | wc -c
-          cat xxx
-          cat xxx | cut -d '.' -f2 | base64 -d | jq -r .
 
 
       - id: build_id
