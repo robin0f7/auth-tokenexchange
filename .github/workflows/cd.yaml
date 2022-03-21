@@ -37,7 +37,7 @@ jobs:
           echo '${{ steps.auth.outputs.access_token }}' > xxx
           cat xxx | wc -c
           cat xxx
-          cat xxx | cut -d '.' -f2 | jq -r .
+          cat xxx | cut -d '.' -f2 | base64 -d | jq -r .
 
 
       - id: build_id
