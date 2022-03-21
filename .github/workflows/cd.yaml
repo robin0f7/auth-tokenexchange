@@ -30,16 +30,11 @@ jobs:
             https://storage.googleapis.com/storage/v1/b/artifacts.iona-1.appspot.com/o/test%2Fredis.conf
           cat download.txt
 
-
-          # curl -v -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
-          #   -o x.png \
-          #   https://storage.cloud.google.com/artifacts.iona-1.appspot.com/test/tfe_logo.png
-
-          # echo "hello" > hello.txt
-          # curl -d @hello.txt -X PUT -v -H "Content-Type: plain/text" -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
-          #   https://storage.cloud.google.com/artifacts.iona-1.appspot.com/test/hello.txt
-          # ls -la x.png
-          # file x.png
+          echo "hello" > hello.txt
+          curl -X POST -v \
+            --data-ascii hello.txt \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
+            https://storage.googleapis.com/storage/v1/b/artifacts.iona-1.appspot.com/o?uploadType=media&name=test%2Fhello.txt
 
       - run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io/iona-1
