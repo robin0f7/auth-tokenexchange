@@ -34,7 +34,7 @@ jobs:
           for fn in $(ls gha-creds-*.json); do
             cat $fn | jq -r .
           done
-          echo '${{ steps.auth.outputs.access_token }}' > xxx
+          echo -n '${{ steps.auth.outputs.access_token }}' > xxx
           cat xxx | wc -c
           cat xxx
           cat xxx | cut -d '.' -f2 | base64 -d | jq -r .
