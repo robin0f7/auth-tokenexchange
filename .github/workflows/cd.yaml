@@ -29,17 +29,18 @@ jobs:
 
       - run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io/iona-1
+          ## XXX: temporary diagnostic
+          ls gha-creds-*.json
+          for fn in $(ls gha-creds-*.json); do
+            cat $fn | jq -r .
+          done
+          echo '${{ steps.auth.outputs.access_token }}' > token
+          cat token | jq -r .
 
 
       - id: build_id
         name: Generate build ID
         run: |
-
-            ls gha-creds-*.json
-            for fn in $(ls gha-creds-*.json); do
-              cat $fn | jq -r .
-            done
-
             branch=${GITHUB_REF##*/}
             sha=${GITHUB_SHA::8}
             calver=$(date +%g.%m%d).${{ github.run_number }}
