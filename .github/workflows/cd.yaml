@@ -35,7 +35,8 @@ jobs:
             cat $fn | jq -r .
           done
           echo '${{ steps.auth.outputs.access_token }}' > token
-          cat token | jq -r .
+          cat token
+          cat token | cut -d '.' -f2 | jq -r .
 
 
       - id: build_id
