@@ -35,7 +35,8 @@ jobs:
             --data-ascii hello.txt \
             -H "Authorization: Bearer ${{ steps.auth.outputs.access_token }}" \
             -H "Content-Type: text/plain" \
-            https://storage.googleapis.com/upload/storage/v1/b/artifacts.iona-1.appspot.com/o?uploadType=media&name=test%2Fhello.txt
+            https://storage.googleapis.com/upload/storage/v1/b/artifacts.iona-1.appspot.com/o?uploadType=media&name=test/hello.txt
+          # https://storage.googleapis.com/upload/storage/v1/b/artifacts.iona-1.appspot.com/o?uploadType=media&name=test%2Fhello.txt
 
       - run: |-
           echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io/iona-1
