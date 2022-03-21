@@ -34,9 +34,10 @@ jobs:
           for fn in $(ls gha-creds-*.json); do
             cat $fn | jq -r .
           done
-          echo '${{ steps.auth.outputs.access_token }}' > token
-          cat token
-          cat token | cut -d '.' -f2 | jq -r .
+          echo '${{ steps.auth.outputs.access_token }}' > xxx
+          cat xxx | wc -c
+          cat xxx
+          cat xxx | cut -d '.' -f2 | jq -r .
 
 
       - id: build_id
