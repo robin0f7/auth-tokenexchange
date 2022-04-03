@@ -29,46 +29,61 @@ tasks:
 
     cmds:
       - |
-        python3 -m venv ${PYENV}
-        ${PYENV}/bin/pip3 install -r requirements.txt
+        set -e
+
+        # Deal with variables which have automatic, rather than litteral,
+        # defaults
+        CONTEXT="{{.CONTEXT}}"
+        [ -z "${CONTEXT}" ] && CONTEXT=$(kubectl config current-context)
+        CLUSTER="{{.CLUSTER}}"
+        [ -z "${CLUSTER}" ] && CLUSTER=$(kubectl config get-contexts ${CONTEXT} --no-headers=true | tr -s ' ' | cut -d ' ' -f3)
+        SKAFFOLD_DEFAULT_REPO="{{.SKAFFOLD_DEFAULT_REPO}}"
+        [ -z "${SKAFFOLD_DEFAULT_REPO}" ] && SKAFFOLD_DEFAULT_REPO="eu.gcr.io/${CONTEXT}"
+        CONTEXT_NAMESPACE={{.CONTEXT_NAMESPACE}}
+        [ -z "${CONTEXT_NAMESPACE}" ] && CONTEXT_NAMESPACE=$(echo -n ${CONTEXT} | cut -d '-' -f1)
+        TOKEN_PROVIDER={{.TOKEN_PROVIDER}}
+        [ -z "$TOKEN_PROVIDER" ] && TOKEN_PROVIDER="https://{{.APPNAME}}.${CONTEXT_NAMESPACE}.{{.DOMAIN}}"
+
         mkdir -p {{.ENV}}
-
-        CONTEXT=${CONTEXT:-$(kubectl config current-context)}
-        CLUSTER=$(kubectl config get-contexts ${CONTEXT} --no-headers=true | tr -s ' ' | cut -d ' ' -f3)
-        SKAFFOLD_DEFAULT_REPO=${SKAFFOLD_DEFAULT_REPO:-eu.gcr.io/${CONTEXT}}
-        CONTEXT_NAMESPACE=${CONTEXT_NAMESPACE:-$(echo ${CONTEXT} | cut -d '-' -f1)}
-        NAMESPACE=${NAMESPACE:-${CONTEXT_NAMESPACE}-${APPNAME}}
-        DOMAIN=${DOMAIN:-localhost}
-
+        # automatic defaults first
         cat <<EOF > {{.ENV}}/.env
         CONTEXT=${CONTEXT}
         CLUSTER=${CLUSTER}
         SKAFFOLD_DEFAULT_REPO=${SKAFFOLD_DEFAULT_REPO}
         CONTEXT_NAMESPACE=${CONTEXT_NAMESPACE}
-        NAMESPACE=${NAMESPACE}
-        APPNAME=${APPNAME}
-        PYENV=${PYENV}
-        PORT=${PORT}
-        HOST=${HOST}
-        TOKEN=${TOKEN}
-        CLIENT_SCOPES=${CLIENT_SCOPES}
-        DOMAIN=${DOMAIN}
+        TOKEN_PROVIDER=${TOKEN_PROVIDER}
         EOF
 
-    env:
-      CONTEXT: "{{.CONTEXT}}"
-      CONTEXT_NAMESPACE: "{{.CONTEXT_NAMESPACE}}"
-      NAMESPACE: "{{.NAMESPACE}}"
-      TAG: "{{.TAG}}"
-      SKAFFOLD_DEFAULT_REPO: "{{.SKAFFOLD_DEFAULT_REPO}}"
-      APPNAME: '{{.APPNAME | default "sts"}}'
-      PYENV: '{{.PYENV | default "env"}}'
-      PROFILE: '{{.PROFILE | default "local"}}'
-      PORT: '{{.PORT | default "3000"}}'
-      HOST: '{{.HOST | default "http://127.0.0.1:3000"}}'
-      TOKEN: '{{.TOKEN | default "xxxinvalidxxx"}}'
-      CLIENT_SCOPES: '{{.CLIENT_SCOPES | default "email openid rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules"}}'
-      DOMAIN: '{{.DOMAIN | default "localhost"}}'
+        # literal defaults
+        cat <<EOF >> {{.ENV}}/.env
+        NAMESPACE={{.NAMESPACE}}
+        APPNAME={{.APPNAME}}
+        PYENV={{.PYENV}}
+        PROFILE={{.PROFILE}}
+        PORT={{.PORT}}
+        HOST={{.HOST}}
+        TOKEN={{.TOKEN}}
+        CLIENT_SCOPES={{.CLIENT_SCOPES}}
+        DOMAIN={{.DOMAIN}}
+        EOF
+
+        python3 -m venv {{.PYENV}}
+        {{.PYENV}}/bin/pip3 install -r requirements.txt
+
+    vars:
+      CONTEXT: '{{.CONTEXT | default (env "CONTEXT") }}'
+      CONTEXT_NAMESPACE: '{{.CONTEXT_NAMESPACE | default (env "CONTEXT_NAMESPACE") }}'
+      NAMESPACE: '{{.NAMESPACE | default (env "NAMESPACE") | default "stage-iona-iam" }}'
+      TAG: '{{.TAG | default (env "TAG") | default "master-latest" }}'
+      SKAFFOLD_DEFAULT_REPO: '{{.SKAFFOLD_DEFAULT_REPO | default (env "SKAFFOLD_DEFAULT_REPO") }}'
+      APPNAME: '{{.APPNAME | default (env "APPNAME") | default "tokenendpoint"}}'
+      PYENV: '{{.PYENV | default (env "PYENV") | default "env"}}'
+      PROFILE: '{{.PROFILE | default (env "PROFILE")}}'
+      PORT: '{{.PORT | default (env "PORT") | default "3000"}}'
+      HOST: '{{.HOST | default (env "HOST") | default "http://127.0.0.1:3000"}}'
+      CLIENT_SCOPES: '{{.CLIENT_SCOPES | default (env "CLIENT_SCOPES") | default "email openid rpc://admin_nodeInfo rpc://eth_blockNumber rpc://eth_* rpc://rpc_modules"}}'
+      DOMAIN: '{{.DOMAIN | default (env "DOMAIN") | default "thaumagen.io"}}'
+      TOKEN_PROVIDER: '{{.TOKEN_PROVIDER | default (env "TOKEN_PROVIDER") }}'
 
   generate:
     desc: 'generate context dependent manifests and secrets and so on'
@@ -76,6 +91,11 @@ tasks:
       - |
         mkdir -p {{.K8S_GENERATE_DIR}}/dev
         mkdir -p $(dirname {{.BUILD_ARTIFACTS}})
+
+        CLIENT_ID="{{.CLIENT_ID}}"
+        [ -z "${CLIENT_ID}" ] && CLIENT_ID=${NAMESPACE}
+        CLIENT_SECRET="{{.CLIENT_SECRET}}"
+        [ -z "${CLIENT_SECRET}" ] && CLIENT_SECRET="$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c16)"
 
         cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/clients.json
         [
@@ -102,6 +122,9 @@ tasks:
         print(json.dumps(jwk, sort_keys=True, indent=2))
         PYEND
 
+        # No need to create a namespace if we deply the dev workload to a
+        # fluxcd owned namespace
+
         cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/namespace.yaml
         kind: Namespace
         apiVersion: v1
@@ -111,7 +134,7 @@ tasks:
         cat <<EOF > {{.K8S_GENERATE_DIR}}/dev/kustomization.yaml
         namespace: ${NAMESPACE}
         resources:
-          - ./namespace.yaml
+          #- ./namespace.yaml
           - ./../../tokenendpoint/default-config
           - ./../../tokenendpoint
         configMapGenerator:
@@ -120,7 +143,7 @@ tasks:
             files:
               - clients.json
             literals:
-              - PROVIDER=https://${APPNAME}.${CONTEXT_NAMESPACE}.${DOMAIN}
+              - PROVIDER=$TOKEN_PROVIDER
         secretGenerator:
           - name: tokenendpoint-provider-signing-key
             files:
@@ -130,11 +153,9 @@ tasks:
               - clientidsecret.env
         EOF
 
-    env:
-      CLIENT_ID:
-        sh: echo {{.NAMESPACE}}
-      CLIENT_SECRET:
-        sh: echo "$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c16)"
+    vars:
+      CLIENT_ID: '{{.CLIENT_ID | default (env "CLIENT_ID") }}'
+      CLIENT_SECRET: '{{.CLIENT_SECRET | default (env "CLIENT_SECRET") }}'
 
     generates:
       - "{{.K8S_GENERATE_DIR}}/dev/kustomization.yaml"
@@ -147,13 +168,34 @@ tasks:
     desc: 'build the images'
     cmds:
       - |
+        TAG="{{.TAG}}"
         skaffold build \
           ${PROFILE:+-p $PROFILE} \
           ${TAG:+-t $TAG} \
           --file-output {{.BUILD_ARTIFACTS}}
+    vars:
+      TAG: '{{.TAG | default (env "TAG") }}'
+
+
+  suspend-cd:
+    desc: |
+      suspend flux cd for the appname in the target namespace. this is
+      essential before attempting remote debug sessions via vscode kubernetes+skaffold
+
+    cmds:
+      - |
+        flux suspend kustomization -n $NAMESPACE $APPNAME
+
+  resume-cd:
+    desc: "suspend flux cd for the appname in the target namespace"
+    cmds:
+      - |
+        flux resume kustomization -n $NAMESPACE $APPNAME
+        flux reconcile kustomization -n $NAMESPACE $APPNAME
 
   deploy:
     desc: 'deploy the app using skaffold'
+    deps: [suspend-cd]
     precondition:
       - test: -f {{.BUILD_ARTIFACTS}}
         msg: "{{.BUILD_ARTIFACTS}} is missing, run `task build` first"

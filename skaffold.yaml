@@ -10,6 +10,7 @@ build:
     #  format: "20060102.1504.05"
     #  timezone: UTC
   local:
+    # for vscode/cloud debug we need the default profile to push
     push: true
     concurrency: 8
     useBuildkit: true
@@ -22,6 +23,14 @@ deploy:
   kustomize:
     paths:
       - k8s/tmp/dev
+    flags:
+      # Don't ever delete the service account. It is managed by terraform
+      # TODO: figure out how to generaly prevent gcp principal annotated things
+      # from being deleted. They look like:
+      # Annotations:         iam.gke.io/gcp-service-account: apikeystore-sa@iona-1.iam.gserviceaccount.com
+      delete:
+        - --field-selector metadata.name!=apikeystore-sa
+        - --cascade=false
 
 profiles:
   - name: build
